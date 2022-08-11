@@ -1,7 +1,8 @@
 ﻿using FluentFTP;
 using System.Data.Odbc;
-using MySql.Data;
 using MySql.Data.MySqlClient;
+using CS_mod.Ecommerce_Artikelimport;
+
 
 /*
  * Doku für FluentFTP:  https://github.com/robinrodricks/FluentFTP/wiki/Quick-Start-Example
@@ -48,351 +49,114 @@ if (!CheckIfConfigExists())
     Console.ReadKey();
     return;
 }
-// Doppelt hält besser ;)
-if (CheckIfConfigExists())
+
+Console.WriteLine("Config Dateien vorhanden.");
+Console.WriteLine("Lese Config ein.");
+
+// Variablen
+bool            sage = false,                           // Wenn true: Sage wird benutzt, Config wird ausgelesen.
+                kosatec = false,                        // Wenn true: Kosatec wird benutzt, Config wird ausgelesen.
+                wortmann = false,                       // Wenn true: Wortmann wird benutzt, Config wird ausgelesen.
+                intos = false,                          // Wenn true: Intos wird benutzt, Config wird ausgelesen.
+                api = false;                            // Wenn true: Api wird benutzt, Config wird ausgelesen.
+
+// Main Config einlesen
+foreach (string line in File.ReadAllLines(configMain))
 {
-    Console.WriteLine("Config Dateien vorhanden.");
-    Console.WriteLine("Lese Config ein.");
-    
-    // Variablen
-    bool            sage = false,                           // Wenn true: Sage wird benutzt, Config wird ausgelesen.
-                    kosatec = false,                        // Wenn true: Kosatec wird benutzt, Config wird ausgelesen.
-                    wortmann = false,                       // Wenn true: Wortmann wird benutzt, Config wird ausgelesen.
-                    intos = false,                          // Wenn true: Intos wird benutzt, Config wird ausgelesen.
-                    api = false,                            // Wenn true: Api wird benutzt, Config wird ausgelesen.
-                    kosatecAufschlagsart,                   // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
-                    wortmannAufschlagsart,                  // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
-                    intosAufschlagsart,                     // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
-                    apiAufschlagsart;                       // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
-
-                    // Online Shop
-    string          shopDatabaseIPAddess        = "",       // IP Adresse der Datenbank für den Onlineshop, Alternativ auch Domain möglich.
-                    shopDatabaseUser            = "",       // Datenbank Benutzer mit Lese- und Schreibrechten
-                    shopDatabasePassword        = "",       // Passwort für Datenbank Benutzer
-                    shopDatabase                = "",       // Datenbank vom Shop
-
-                    shopFtpServer               = "",       // FTP Server mit Zugriff auf den Shop
-                    shopFtpUser                 = "",       // FTP Benutzer
-                    shopFtpPassword             = "",       // Passwort für FTP Benutzer
-                    shopFtpRoot                 = "",       // Pfad vom Loginroot des Benutzers zum Onlineshop (Bsp: shop/ )
-                    shopAdminFolder             = "",       // Benennung des Admin Orderns innerhalb des Shops (Bsp: admin_xyz )
-                    // SAGE
-                    sageServer                  = "",       // SQL Server für Warenwirtschaft
-                    sageUser                    = "",       // Benutzer mit Zugriff auf die Datenbank
-                    sagePasswort                = "",       // Passwort für Datenbank Benutzer
-                    sageDatabase                = "",       // Name der Datenbank für SAGE
-                    // Kosatec
-                    kosatecDownloadURL          = "",       // Downloadlink für Artikeldaten von Kosatec
-                    kosatecPreisStandard        = "",       // Option aus "netto" und "brutto"
-                    // Wortmann
-                    wortmannUser                = "",       // FTP Benutzer, gestellt von Wortmann
-                    wortmannPassword            = "",       // Passwort für FTP Benutzer
-                    wortmannPreisStandard       = "",       // Option aus "netto" und "brutto"
-                    // Intos
-                    intosUser                   = "",       // FTP Benutzer, gestellt von Intos
-                    intosPassword               = "",       // Passwort für FTP Benutzer
-                    intosPreisStandard          = "",       // Option aus "netto" und "brutto"
-                    // API
-                    apiUser                     = "",       // Kundennummer von API
-                    apiPassword                 = "",       // Passwort für den Onlineshop
-                    apiPreisStandard            = "";       // Option aus "netto" und "brutto"
-
-    int             pictureQuantity,                        // Anzahl der im Shop aktivierten Bilder pro Artikel
-
-                    kosatecImportID,                        // ID Der Kategorie in die Importiert werden soll
-                    kosatecPreisaufschlag,                  // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
-
-                    wortmannImportID,                       // ID Der Kategorie in die Importiert werden soll
-                    wortmannPreisaufschlag,                 // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
-
-                    intosImportID,                          // ID Der Kategorie in die Importiert werden soll
-                    intosPreisaufschlag,                    // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
-
-                    apiImportID,                            // ID Der Kategorie in die Importiert werden soll
-                    apiPreisaufschlag;                      // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
-
-    string[]        kosatecIgnoredItems,                    // Array aus Artikelnummern, die nicht importiert werden sollen.
-                    kosatecIgnoredCategories,               // Array aus Kategorie Namen, die nicht imortiert werden sollen.
-
-                    wortmannIgnoredItems,                   // Array aus Artikelnummern, die nicht importiert werden sollen.
-                    wortmannIgnoredCategories,              // Array aus Kategorie Namen, die nicht imortiert werden sollen.
-
-                    intosIgnoredItems,                      // Array aus Artikelnummern, die nicht importiert werden sollen.
-                    intosIgnoredCategories,                 // Array aus Kategorie Namen, die nicht imortiert werden sollen.
-
-                    apiIgnoredItems,                        // Array aus Artikelnummern, die nicht importiert werden sollen.
-                    apiIgnoredCategories;                   // Array aus Kategorie Namen, die nicht imortiert werden sollen.
-
-                    // Aufschläge für einzelne Kategorien. Aufbau: (Name der Kategorie, Wert, Art (0 = Aufschlag in € | 1 = Aufschlag in %))
-    List<string>    kosatecEigenerAufschlag     = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
-         
-                    wortmannEigenerAufschlag    = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
-
-                    intosEigenerAufschlag       = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
-
-                    apiEigenerAufschlag         = new();    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
-
-    // Main Config einlesen
-    foreach (string line in File.ReadAllLines(configMain))
+    if (line.StartsWith("#")) { continue; }
+    if (line.StartsWith("\n")) { continue; }
+    if (line.Contains(':'))
     {
-        if (line.StartsWith("#")) { continue; }
-        if (line.StartsWith("\n")) { continue; }
-        if (line.Contains(':'))
+        var part = line.Split(":");
+        part[1] = part[1].ToLower();
+        if (part[1] == "true")
         {
-            var part = line.Split(":");
-            part[1] = part[1].ToLower();
-            if (part[1] == "true")
-            {
-                switch (part[0]) {
-                    case "useKosatec":
-                        kosatec = true;
-                        break;
-                    case "useWortmann":
-                        wortmann = true;
-                        break;
-                    case "useIntos":
-                        intos = true;
-                        break;
-                    case "useApi":
-                        api = true;
-                        break;
-                    case "useSage":
-                        sage = true;
-                        break;
-                    default:
-                        continue;
-                }
+            switch (part[0]) {
+                case "useKosatec":
+                    kosatec = true;
+                    break;
+                case "useWortmann":
+                    wortmann = true;
+                    break;
+                case "useIntos":
+                    intos = true;
+                    break;
+                case "useApi":
+                    api = true;
+                    break;
+                case "useSage":
+                    sage = true;
+                    break;
+                default:
+                    continue;
             }
         }
     }
-    // Shop Config einlesen
-    foreach(string line in File.ReadAllLines(configShop))
-    {
-        if (line.StartsWith("#")) { continue; }
-        if (line.StartsWith("\n")) { continue; }
-        if (line.StartsWith("IP")) { shopDatabaseIPAddess = line.Split(":")[1]; }
-        if (line.StartsWith("User")) { shopDatabaseUser = line.Split(":")[1]; }
-        if (line.StartsWith("Password")) { shopDatabasePassword = line.Split(":")[1]; }
-        if (line.StartsWith("Database")) { shopDatabase = line.Split(":")[1]; }
-        if (line.StartsWith("Bilder")) { pictureQuantity = Convert.ToInt32(line.Split(":")[1]); }
-        if (line.StartsWith("ftpServer")) { shopFtpServer = line.Split(":")[1]; }
-        if (line.StartsWith("ftpUser")) { shopFtpUser = line.Split(":")[1]; }
-        if (line.StartsWith("ftpPassword")) { shopFtpPassword = line.Split(":")[1]; }
-        if (line.StartsWith("ShopVerzeichnis")) { shopFtpRoot = line.Split(":")[1]; }
-        if (line.StartsWith("AdminOrdnerName")) { shopAdminFolder = line.Split(":")[1]; }
-    }
-    // SAGE Config einlesen
-    if (sage)
-    {
-        foreach(string line in File.ReadAllLines(configSage))
-        {
-            if (line.StartsWith("#")) { continue; }
-            if (line.StartsWith("\n")) { continue; }
-            if (line.StartsWith("Server")) { sageServer = line.Split(":")[1]; }
-            if (line.StartsWith("User")) { sageUser = line.Split(":")[1]; }
-            if (line.StartsWith("Password")) { sagePasswort = line.Split(":")[1]; }
-            if (line.StartsWith("Database")) { sageDatabase = line.Split(":")[1]; }
-        }
-    }
-    // Kosatec Config einlesen
-    if (kosatec)
-    {
-        foreach(string line in File.ReadAllLines(configKosatec))
-        {
-            if (line.StartsWith("#")) { continue; }
-            if (line.StartsWith("\n")) { continue; }
-            if (line.StartsWith("DownloadURL")) { kosatecDownloadURL = line.Split(":")[1]; }
-            if (line.StartsWith("ImportID")) { kosatecImportID = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("Preis")) { kosatecPreisStandard = line.Split(":")[1]; }
-            if (line.StartsWith("AufschlagWert")) { kosatecPreisaufschlag = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("AufschlagArt")) { kosatecAufschlagsart = Convert.ToBoolean(line.Split(":")[1]); }
-            if (line.StartsWith("IgnorierteArtikel")) 
-            { 
-                var list = line.Split(":"); 
-                if(list.Length > 0)
-                {
-                    kosatecIgnoredItems = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("IgnorierteKategorien"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    kosatecIgnoredCategories = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("Kat:"))
-            {
-                kosatecEigenerAufschlag.Add(line.Split(":")[1]);
-            }
-        }
-    }
-    // Wortmann Config einlesen
-    if (wortmann)
-    {
-        foreach (string line in File.ReadAllLines(configWortmann))
-        {
-            if (line.StartsWith("#")) { continue; }
-            if (line.StartsWith("\n")) { continue; }
-            if (line.StartsWith("User")) { wortmannUser = line.Split(":")[1]; }
-            if (line.StartsWith("Password")) { wortmannPassword = line.Split(":")[1]; }
-            if (line.StartsWith("ImportID")) { wortmannImportID = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("Preis")) { wortmannPreisStandard = line.Split(":")[1]; }
-            if (line.StartsWith("AufschlagWert")) { wortmannPreisaufschlag = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("AufschlagArt")) { wortmannAufschlagsart = Convert.ToBoolean(line.Split(":")[1]); }
-            if (line.StartsWith("IgnorierteArtikel"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    wortmannIgnoredItems = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("IgnorierteKategorien"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    wortmannIgnoredCategories = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("Kat:"))
-            {
-                wortmannEigenerAufschlag.Add(line.Split(":")[1]);
-            }
-        }
-    }
-    // Intos Config einlesen
-    if (intos)
-    {
-        foreach (string line in File.ReadAllLines(configIntos))
-        {
-            if (line.StartsWith("#")) { continue; }
-            if (line.StartsWith("\n")) { continue; }
-            if (line.StartsWith("User")) { intosUser = line.Split(":")[1]; }
-            if (line.StartsWith("Password")) { intosPassword = line.Split(":")[1]; }
-            if (line.StartsWith("ImportID")) { intosImportID = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("Preis")) { intosPreisStandard = line.Split(":")[1]; }
-            if (line.StartsWith("AufschlagWert")) { intosPreisaufschlag = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("AufschlagArt")) { intosAufschlagsart = Convert.ToBoolean(line.Split(":")[1]); }
-            if (line.StartsWith("IgnorierteArtikel"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    intosIgnoredItems = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("IgnorierteKategorien"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    intosIgnoredCategories = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("Kat:"))
-            {
-                intosEigenerAufschlag.Add(line.Split(":")[1]);
-            }
-        }
-    }
-    // API Config einlesen
-    if (api)
-    {
-        foreach (string line in File.ReadAllLines(configApi))
-        {
-            if (line.StartsWith("#")) { continue; }
-            if (line.StartsWith("\n")) { continue; }
-            if (line.StartsWith("User")) { apiUser = line.Split(":")[1]; }
-            if (line.StartsWith("Password")) { apiPassword = line.Split(":")[1]; }
-            if (line.StartsWith("ImportID")) { apiImportID = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("Preis")) { apiPreisStandard = line.Split(":")[1]; }
-            if (line.StartsWith("AufschlagWert")) { apiPreisaufschlag = Convert.ToInt32(line.Split(":")[1]); }
-            if (line.StartsWith("AufschlagArt")) { apiAufschlagsart = Convert.ToBoolean(line.Split(":")[1]); }
-            if (line.StartsWith("IgnorierteArtikel"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    apiIgnoredItems = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("IgnorierteKategorien"))
-            {
-                var list = line.Split(":");
-                if (list.Length > 0)
-                {
-                    apiIgnoredCategories = list[1].Split(",");
-                }
-            }
-            if (line.StartsWith("Kat:"))
-            {
-                apiEigenerAufschlag.Add(line.Split(":")[1]);
-            }
-        }
-    }
-    Console.WriteLine("Config vollständig eingelesen. Starte Funktionen.");
-    Console.WriteLine("Teste Zugangsdaten für den Shop.");
-    // FTP Zugangsdaten prüfen
-    if (!checkFtpZugang(shopFtpServer, shopFtpUser, shopFtpPassword, shopFtpRoot, shopAdminFolder))
-    {
-        Console.WriteLine("Zugangsdaten für den Shop sind falsch, bitte kontrollieren");
-        Console.ReadKey();
-        return;
-    }
-    else { Console.WriteLine("Zugansdaten für den Shop sind korrekt."); }
-    if (wortmann)
-    {
-        if (!checkFtpZugang(@"ftp://www.wortmann.de", wortmannUser, wortmannPassword))
-        {
-            Console.WriteLine("Zugangsdaten für Wortmann sind falsch, bitte kontrollieren");
-            Console.ReadKey();
-            return;
-        }
-        else { Console.WriteLine("Zugansdaten für Wortmann sind korrekt."); }
-    }
-    if (intos)
-    {
-        if (!checkFtpZugang(@"ftp://ftp.intos.de", intosUser, intosPassword))
-        {
-            Console.WriteLine("Zugangsdaten für Intos sind falsch, bitte kontrollieren");
-            Console.ReadKey();
-            return;
-        }
-        else { Console.WriteLine("Zugansdaten für Intos sind korrekt."); }
-    }
-
-    // Zugriff auf Datenbanken prüfen
-    string odbcConnectionString = "Driver={ODBC Driver 17 for SQL Server}; Server=" + sageServer + ";UID=" + sageUser +
-       ";PWD=" + sagePasswort + ";DATABASE=" + sageDatabase;
-    if (sage)
-    {
-        Console.WriteLine("Prüfe Verbindung zu SAGE Datenbank");
-        using OdbcConnection conn = new(odbcConnectionString);
-        try
-        {
-            conn.Open();
-            conn.Close();
-        }
-        catch (Exception)
-        {
-            Console.WriteLine("Fehlerhafte eingabe. Bitte kontrollieren.\nGgf. muss der ODBC Treiber auf dem PC installiert werden.");
-            Console.WriteLine("Download unter: https://www.microsoft.com/de-de/download/details.aspx?id=56567");
-            Console.ReadKey();
-            return;
-        }
-    }
-    Console.WriteLine("Prüfe Datenbankverbindung zum Shop");
-    string mySqlConnectionString = "server=" + shopDatabaseIPAddess + ";user=" + shopDatabaseUser + ";password=" + shopDatabasePassword +
-        ";database=" + shopDatabase + ";";
-    MySqlConnection mySqlConnection = new(mySqlConnectionString);
-    try { mySqlConnection.Open(); mySqlConnection.Close(); }
-    catch (Exception) { Console.WriteLine("Konfiguration der Datenbank falsch. Bitte korrigieren."); Console.ReadKey(); return; }
-    Console.WriteLine("Datenbank Verbindung okay.");
 }
 
+
+// Configs anlegen
+Config shopConfig = new()
+{
+    IsUsed = true,
+    HasFTP = true,
+    HasMySQL = true,
+    IsOnlineshop = true
+};
+shopConfig.ReadConfig(configShop);
+Config kosatecConfig = new()
+{
+    IsLieferant = true,
+    IsUsed = kosatec,
+};
+Config wortmannConfig = new()
+{
+    IsLieferant = true,
+    IsUsed = wortmann,
+    HasFTP = true,
+};
+Config intosConfig = new()
+{
+    IsLieferant = true,
+    IsUsed = intos,
+    HasFTP = true,
+};
+Config apiConfig = new()
+{
+    IsLieferant = true,
+    IsUsed = api,
+};
+Config sageConfig = new()
+{
+    IsUsed = sage,
+    HasSQL = true,
+};
+
+Console.WriteLine("Lese Konfiguration ... ");
+Console.WriteLine("Lese Kosatec Konfiguration");
+kosatecConfig.ReadConfig(configKosatec);
+Console.WriteLine("Lese Wortmann Konfiguration");
+wortmannConfig.ReadConfig(configWortmann);
+wortmannConfig.Server = @"ftp://www.wortmann.de";
+Console.WriteLine("Lese Intos Konfiguration");
+intosConfig.ReadConfig(configIntos);
+intosConfig.Server = @"ftp://ftp.intos.de";
+Console.WriteLine("Lese Api Konfiguration");
+apiConfig.ReadConfig(configApi);
+Console.WriteLine("Lese Sage Konfiguration");
+sageConfig.ReadConfig(configSage);
+Console.WriteLine("Konfiguration eingelesen.");
+
+Console.WriteLine("Teste Logindaten...");
+Console.WriteLine("Teste Onlineshop");
+if (!shopConfig.CheckLogin()) { Console.WriteLine("Fehler in der Konfiguration. Bitte überprüfen."); Console.ReadKey(); return; }
+Console.WriteLine("Teste Wortmann");
+if (!wortmannConfig.CheckLogin()) { Console.WriteLine("Fehler in der Konfiguration. Bitte überprüfen."); Console.ReadKey(); return; }
+Console.WriteLine("Teste Intos");
+if (!intosConfig.CheckLogin()) { Console.WriteLine("Fehler in der Konfiguration. Bitte überprüfen."); Console.ReadKey(); return; }
+Console.WriteLine("Teste Sage");
+if (!sageConfig.CheckLogin()) { Console.WriteLine("Fehler in der Konfiguration. Bitte überprüfen."); Console.ReadKey(); return; }
+Console.WriteLine("Logindaten geprüft.");
 
 
 // Funktionen
@@ -426,7 +190,7 @@ static void CreateConfigFiles()
     shop =      "# Shop Config Datei.\n" +
                 "# Konfiguration der Funktionen des Programms.\n\n\n" +
                 "# Datenbank einstellungen\n" +
-                "IP:0.0.0.0\n" +
+                "Server:0.0.0.0\n" +
                 "User:root\n" +
                 "Password:passwort1\n" +
                 "Database:onlineshop\n\n\n" + 
@@ -571,27 +335,5 @@ static void CreateConfigFiles()
         using StreamWriter sw = new(path);
         sw.Write(content);
         sw.Close();
-    }
-}
-
-bool checkFtpZugang(string server, string user, string pass, string root = "", string adminfolder = "")
-{
-    FtpClient client = new(server, user, pass);
-    try
-    {
-        client.Connect();
-        if(root != "")
-        {
-            if(!client.DirectoryExists("/" + root + adminfolder))
-            {
-                Console.WriteLine("ShopVerzeichnis ist falsch. Bitte kontrollieren.");
-                return false;
-            }
-        }
-        client.Disconnect();
-        return true;
-    }catch(Exception)
-    {
-        return false;
     }
 }
