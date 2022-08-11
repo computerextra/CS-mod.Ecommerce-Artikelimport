@@ -48,7 +48,7 @@ if (!CheckIfConfigExists())
     Console.ReadKey();
     return;
 }
-
+// Doppelt hält besser ;)
 if (CheckIfConfigExists())
 {
     Console.WriteLine("Config Dateien vorhanden.");
