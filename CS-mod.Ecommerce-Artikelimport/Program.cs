@@ -214,6 +214,8 @@ static void CreateConfigFiles()
                 "# Download einstellungen\n" +
                 "DownloadURL:http://data.kosatec.de/xxxx/xxxx/artikeldaten.txt\n\n" +
                 "# Einstellungen für Import\n" +
+                "# CSV Trennzeichen:\n" + 
+                "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
                 "# Einstellungen für Preisberechnung\n" +
@@ -242,6 +244,8 @@ static void CreateConfigFiles()
                 "User:root\n" +
                 "Password:passwort1\n" +
                 "# Einstellungen für Import\n" +
+                 "# CSV Trennzeichen:\n" + 
+                "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
                 "# Einstellungen für Preisberechnung\n" +
@@ -270,6 +274,8 @@ static void CreateConfigFiles()
                 "User:root\n" +
                 "Password:passwort1\n" +
                 "# Einstellungen für Import\n" +
+                 "# CSV Trennzeichen:\n" + 
+                "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
                 "# Einstellungen für Preisberechnung\n" +
@@ -298,6 +304,8 @@ static void CreateConfigFiles()
                 "User:root\n" +
                 "Password:passwort1\n" +
                 "# Einstellungen für Import\n" +
+                 "# CSV Trennzeichen:\n" + 
+                "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
                 "# Einstellungen für Preisberechnung\n" +
