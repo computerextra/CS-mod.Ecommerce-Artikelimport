@@ -18,6 +18,7 @@ namespace CS_mod.Ecommerce_Artikelimport
         public int? ImportID                    { get; set; }       // ID Der Kategorie in die Importiert werden soll
         public string[]? IgnoredItems           { get; set; }       // Array aus Artikelnummern, die nicht importiert werden sollen.
         public string[]? IgnoredCategories      { get; set; }       // Array aus Kategorie Namen, die nicht imortiert werden sollen.
+        public string? Trennzeichen             { get; set; }       // CSV Trennzeichen!
 
         // Aufschläge für einzelne Kategorien. Aufbau: (Name der Kategorie, Wert, Art (0 = Aufschlag in € | 1 = Aufschlag in %))
         public List<string>? EigenerAufschlag { get; set; }         // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
@@ -107,6 +108,9 @@ namespace CS_mod.Ecommerce_Artikelimport
                         break;
                     case "Kat":
                         EigenerAufschlag.Add(split[1]);
+                        break;
+                    case "Trennzeichen":
+                        Trennzeichen = split[1];
                         break;
                     default: continue;
                 }
