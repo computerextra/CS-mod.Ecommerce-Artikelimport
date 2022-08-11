@@ -65,8 +65,8 @@ if (CheckIfConfigExists())
                     intosAufschlagsart,                     // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
                     apiAufschlagsart;                       // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
 
-    string          // Online Shop
-                    shopDatabaseIPAddess        = "",       // IP Adresse der Datenbank für den Onlineshop, Alternativ auch Domain möglich.
+                    // Online Shop
+    string          shopDatabaseIPAddess        = "",       // IP Adresse der Datenbank für den Onlineshop, Alternativ auch Domain möglich.
                     shopDatabaseUser            = "",       // Datenbank Benutzer mit Lese- und Schreibrechten
                     shopDatabasePassword        = "",       // Passwort für Datenbank Benutzer
                     shopDatabase                = "",       // Datenbank vom Shop
@@ -123,8 +123,8 @@ if (CheckIfConfigExists())
                     apiIgnoredItems,                        // Array aus Artikelnummern, die nicht importiert werden sollen.
                     apiIgnoredCategories;                   // Array aus Kategorie Namen, die nicht imortiert werden sollen.
 
-    List<string>    // Aufschläge für einzelne Kategorien. Aufbau: (Name der Kategorie, Wert, Art (0 = Aufschlag in € | 1 = Aufschlag in %))
-                    kosatecEigenerAufschlag     = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
+                    // Aufschläge für einzelne Kategorien. Aufbau: (Name der Kategorie, Wert, Art (0 = Aufschlag in € | 1 = Aufschlag in %))
+    List<string>    kosatecEigenerAufschlag     = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
          
                     wortmannEigenerAufschlag    = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
 
