@@ -10,24 +10,33 @@ using MySql.Data.MySqlClient;
  */
 
 // Config Files und Ordner
-const string configFolder = @"config";
-const string configMain = configFolder + "/" + "main.config";
-const string configShop = configFolder + "/" + "shop.config";
-const string configSage = configFolder + "/" + "sage.config";
-const string configKosatec = configFolder + "/" + "kosatec.config";
-const string configWortmann = configFolder + "/" + "wortmann.config";
-const string configIntos = configFolder + "/" + "intos.config";
-const string configApi = configFolder + "/" + "api.config";
+const string configFolder               =   @"config";                              // Ordner in dem alle Konfigdateien gespeichert sind.
+const string configMain                 =   configFolder + "/" + "main.config";     // Haupt Konfigurationsdatei
+const string configShop                 =   configFolder + "/" + "shop.config";     // Konfigurationsdatei für Shop
+const string configSage                 =   configFolder + "/" + "sage.config";     // Konfigurationsdatei für Sage
+const string configKosatec              =   configFolder + "/" + "kosatec.config";  // Konfigurationsdatei für Kosatec
+const string configWortmann             =   configFolder + "/" + "wortmann.config"; // Konfigurationsdatei für Wortmann
+const string configIntos                =   configFolder + "/" + "intos.config";    // Konfigurationsdatei für Intos
+const string configApi                  =   configFolder + "/" + "api.config";      // Konfigurationsdatei für Api
 
-// Temporäre Pfade für CSV Dateien.
-const string downloadFolder = @"download";
-const string bilderFolder = downloadFolder + @"/bilder";
-const string kosatecFile = "kosatec.csv";
-const string intosFile = "intos.csv";
-const string apiFile = "api.csv";
-const string wortmannProdukte = "wortmann.csv";
-const string wortmannContent = "wortmannContent.csv";
-const string wortmannBilder = "bilder.zip";
+// Temporäre Pfade für CSV Dateien. Werden nach Programmende wieder gelöscht.
+const string downloadFolder             =   @"download";                            // Temp. Ordner für Downloads
+const string bilderFolder               =   downloadFolder + "/bilder";             // Temp. Ordner für Bilderdownload
+const string kosatecFile                =   "kosatec.csv";                          // Kosatec Preisliste
+const string intosFile                  =   "intos.csv";                            // Intos Preisliste
+const string apiFile                    =   "api.csv";                              // API Preisliste
+const string wortmannProdukte           =   "wortmann.csv";                         // Wortmann Produktdaten
+const string wortmannContent            =   "wortmannContent.csv";                  // Wortmann Langtexte
+const string wortmannBilder             =   "bilder.zip";                           // Wortmann Artikelbilder
+
+// Shop Datenbank Tabellen, die bearbeitet werden müssen
+const string tableProducts              =   "products";                             // Stammdaten der Artikel
+const string tableProductsDescription   =   "products_description";                 // Beschreibungen der Artikel
+const string tableProductsImages        =   "products_images";                      // Produktbilder
+const string tableManufacturers         =   "manufacturers";                        // Hersteller
+const string tableCategories            =   "categories";                           // Kategorien
+const string tableCategoriesDescription =   "categories_description";               // Beschreibungen der Kategorien
+const string tableProductsToCategories  =   "products_to_categories";               // Verknüpfen der Artikel mit den Kategorien
 
 // Prüfe ob Config vorhanden
 if (!CheckIfConfigExists())
@@ -46,38 +55,92 @@ if (CheckIfConfigExists())
     Console.WriteLine("Lese Config ein.");
     
     // Variablen
-    bool            sage = false, kosatec = false, wortmann = false, intos = false, api = false, 
-                    kosatecAufschlagsart, wortmannAufschlagsart, intosAufschlagsart, apiAufschlagsart;
-    string          shopDatabaseIPAddess = "", shopDatabaseUser = "", shopDatabasePassword = "", shopDatabase = "",
-                    shopFtpServer = @"", shopFtpUser = "", shopFtpPassword = "", shopFtpRoot = @"", shopAdminFolder = "",
-                    sageServer = "", sageUser = "", sagePasswort = "", sageDatabase = "",
-                    kosatecDownloadURL = @"", kosatecPreisStandard = "",
-                    wortmannUser = "", wortmannPassword = "", wortmannPreisStandard = "",
-                    intosUser = "", intosPassword = "", intosPreisStandard = "",
-                    apiUser = "", apiPassword = "", apiPreisStandard = "";
-    int             pictureQuantity = 0, 
-                    kosatecImportID = 0, kosatecPreisaufschlag = 0, 
-                    wortmannImportID = 0, wortmannPreisaufschlag = 0,
-                    intosImportID = 0, intosPreisaufschlag = 0,
-                    apiImportID = 0, apiPreisaufschlag = 0;
-    string[]        kosatecIgnoredItems, kosatecIgnoredCategories, 
-                    wortmannIgnoredItems, wortmannIgnoredCategories,
-                    intosIgnoredItems, intosIgnoredCategories,
-                    apiIgnoredItems, apiIgnoredCategories;
-    List<string>    kosatecEigenerAufschlag = new(),
-                    wortmannEigenerAufschlag = new(), 
-                    intosEigenerAufschlag = new(),
-                    apiEigenerAufschlag = new();
+    bool            sage = false,                           // Wenn true: Sage wird benutzt, Config wird ausgelesen.
+                    kosatec = false,                        // Wenn true: Kosatec wird benutzt, Config wird ausgelesen.
+                    wortmann = false,                       // Wenn true: Wortmann wird benutzt, Config wird ausgelesen.
+                    intos = false,                          // Wenn true: Intos wird benutzt, Config wird ausgelesen.
+                    api = false,                            // Wenn true: Api wird benutzt, Config wird ausgelesen.
+                    kosatecAufschlagsart,                   // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
+                    wortmannAufschlagsart,                  // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
+                    intosAufschlagsart,                     // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
+                    apiAufschlagsart;                       // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
+
+    string          // Online Shop
+                    shopDatabaseIPAddess        = "",       // IP Adresse der Datenbank für den Onlineshop, Alternativ auch Domain möglich.
+                    shopDatabaseUser            = "",       // Datenbank Benutzer mit Lese- und Schreibrechten
+                    shopDatabasePassword        = "",       // Passwort für Datenbank Benutzer
+                    shopDatabase                = "",       // Datenbank vom Shop
+
+                    shopFtpServer               = "",       // FTP Server mit Zugriff auf den Shop
+                    shopFtpUser                 = "",       // FTP Benutzer
+                    shopFtpPassword             = "",       // Passwort für FTP Benutzer
+                    shopFtpRoot                 = "",       // Pfad vom Loginroot des Benutzers zum Onlineshop (Bsp: shop/ )
+                    shopAdminFolder             = "",       // Benennung des Admin Orderns innerhalb des Shops (Bsp: admin_xyz )
+                    // SAGE
+                    sageServer                  = "",       // SQL Server für Warenwirtschaft
+                    sageUser                    = "",       // Benutzer mit Zugriff auf die Datenbank
+                    sagePasswort                = "",       // Passwort für Datenbank Benutzer
+                    sageDatabase                = "",       // Name der Datenbank für SAGE
+                    // Kosatec
+                    kosatecDownloadURL          = "",       // Downloadlink für Artikeldaten von Kosatec
+                    kosatecPreisStandard        = "",       // Option aus "netto" und "brutto"
+                    // Wortmann
+                    wortmannUser                = "",       // FTP Benutzer, gestellt von Wortmann
+                    wortmannPassword            = "",       // Passwort für FTP Benutzer
+                    wortmannPreisStandard       = "",       // Option aus "netto" und "brutto"
+                    // Intos
+                    intosUser                   = "",       // FTP Benutzer, gestellt von Intos
+                    intosPassword               = "",       // Passwort für FTP Benutzer
+                    intosPreisStandard          = "",       // Option aus "netto" und "brutto"
+                    // API
+                    apiUser                     = "",       // Kundennummer von API
+                    apiPassword                 = "",       // Passwort für den Onlineshop
+                    apiPreisStandard            = "";       // Option aus "netto" und "brutto"
+
+    int             pictureQuantity,                        // Anzahl der im Shop aktivierten Bilder pro Artikel
+
+                    kosatecImportID,                        // ID Der Kategorie in die Importiert werden soll
+                    kosatecPreisaufschlag,                  // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
+
+                    wortmannImportID,                       // ID Der Kategorie in die Importiert werden soll
+                    wortmannPreisaufschlag,                 // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
+
+                    intosImportID,                          // ID Der Kategorie in die Importiert werden soll
+                    intosPreisaufschlag,                    // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
+
+                    apiImportID,                            // ID Der Kategorie in die Importiert werden soll
+                    apiPreisaufschlag;                      // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
+
+    string[]        kosatecIgnoredItems,                    // Array aus Artikelnummern, die nicht importiert werden sollen.
+                    kosatecIgnoredCategories,               // Array aus Kategorie Namen, die nicht imortiert werden sollen.
+
+                    wortmannIgnoredItems,                   // Array aus Artikelnummern, die nicht importiert werden sollen.
+                    wortmannIgnoredCategories,              // Array aus Kategorie Namen, die nicht imortiert werden sollen.
+
+                    intosIgnoredItems,                      // Array aus Artikelnummern, die nicht importiert werden sollen.
+                    intosIgnoredCategories,                 // Array aus Kategorie Namen, die nicht imortiert werden sollen.
+
+                    apiIgnoredItems,                        // Array aus Artikelnummern, die nicht importiert werden sollen.
+                    apiIgnoredCategories;                   // Array aus Kategorie Namen, die nicht imortiert werden sollen.
+
+    List<string>    // Aufschläge für einzelne Kategorien. Aufbau: (Name der Kategorie, Wert, Art (0 = Aufschlag in € | 1 = Aufschlag in %))
+                    kosatecEigenerAufschlag     = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
+         
+                    wortmannEigenerAufschlag    = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
+
+                    intosEigenerAufschlag       = new(),    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
+
+                    apiEigenerAufschlag         = new();    // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
 
     // Main Config einlesen
-    foreach(string line in File.ReadAllLines(configMain))
+    foreach (string line in File.ReadAllLines(configMain))
     {
         if (line.StartsWith("#")) { continue; }
         if (line.StartsWith("\n")) { continue; }
-        if (line.Contains(":"))
+        if (line.Contains(':'))
         {
             var part = line.Split(":");
-            part[1].ToLower();
+            part[1] = part[1].ToLower();
             if (part[1] == "true")
             {
                 switch (part[0]) {
@@ -273,7 +336,7 @@ if (CheckIfConfigExists())
     Console.WriteLine("Config vollständig eingelesen. Starte Funktionen.");
     Console.WriteLine("Teste Zugangsdaten für den Shop.");
     // FTP Zugangsdaten prüfen
-    if (!checkFtpZugang(shopFtpServer, shopFtpUser, shopFtpPassword, shopFtpRoot))
+    if (!checkFtpZugang(shopFtpServer, shopFtpUser, shopFtpPassword, shopFtpRoot, shopAdminFolder))
     {
         Console.WriteLine("Zugangsdaten für den Shop sind falsch, bitte kontrollieren");
         Console.ReadKey();
@@ -327,6 +390,7 @@ if (CheckIfConfigExists())
     MySqlConnection mySqlConnection = new(mySqlConnectionString);
     try { mySqlConnection.Open(); mySqlConnection.Close(); }
     catch (Exception) { Console.WriteLine("Konfiguration der Datenbank falsch. Bitte korrigieren."); Console.ReadKey(); return; }
+    Console.WriteLine("Datenbank Verbindung okay.");
 }
 
 
@@ -510,7 +574,7 @@ static void CreateConfigFiles()
     }
 }
 
-bool checkFtpZugang(string server, string user, string pass, string root = "")
+bool checkFtpZugang(string server, string user, string pass, string root = "", string adminfolder = "")
 {
     FtpClient client = new(server, user, pass);
     try
@@ -518,7 +582,7 @@ bool checkFtpZugang(string server, string user, string pass, string root = "")
         client.Connect();
         if(root != "")
         {
-            if(!client.DirectoryExists("/" + root + "images/product_images/original_images/"))
+            if(!client.DirectoryExists("/" + root + adminfolder))
             {
                 Console.WriteLine("ShopVerzeichnis ist falsch. Bitte kontrollieren.");
                 return false;
