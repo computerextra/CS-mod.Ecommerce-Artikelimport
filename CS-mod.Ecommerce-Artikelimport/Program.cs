@@ -4,9 +4,9 @@ using MySql.Data;
 using MySql.Data.MySqlClient;
 
 /*
- * Doku für FluentFTP: https://github.com/robinrodricks/FluentFTP/wiki/Quick-Start-Example
- * Doku für Odbc: https://docs.microsoft.com/de-de/dotnet/api/system.data.odbc?view=dotnet-plat-ext-6.0
- * Doku für MySql: https://dev.mysql.com/doc/connector-net/en/connector-net-tutorials-sql-command.html
+ * Doku für FluentFTP:  https://github.com/robinrodricks/FluentFTP/wiki/Quick-Start-Example
+ * Doku für Odbc:       https://docs.microsoft.com/de-de/dotnet/api/system.data.odbc?view=dotnet-plat-ext-6.0
+ * Doku für MySql:      https://dev.mysql.com/doc/connector-net/en/connector-net-tutorials-sql-command.html
  */
 
 // Config Files und Ordner
