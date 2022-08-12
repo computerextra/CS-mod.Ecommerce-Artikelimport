@@ -119,7 +119,7 @@ namespace CS_mod.Ecommerce_Artikelimport
         }
         public bool CheckLogin()
         {
-            if (!IsUsed) { Console.WriteLine("Übershprungen, da nicht genutzt."); return true; }
+            if (!IsUsed) { Console.WriteLine("Übersprungen, da nicht genutzt."); return true; }
             bool passed = false;
             if (HasFTP) { passed = FtpLogin(); }
             if (HasSQL) { passed = SqlLogin(); }

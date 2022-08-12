@@ -1,4 +1,6 @@
 ﻿using CS_mod.Ecommerce_Artikelimport;
+using MySql.Data.MySqlClient;
+using System.Runtime.InteropServices;
 
 
 /*
@@ -32,6 +34,7 @@ const string tableProducts              =   "products";                         
 const string tableProductsDescription   =   "products_description";                 // Beschreibungen der Artikel
 const string tableProductsImages        =   "products_images";                      // Produktbilder
 const string tableManufacturers         =   "manufacturers";                        // Hersteller
+const string tableManufacturersInfo     =   "manufacturers_info";                   // Hersteller Beschreibungen
 const string tableCategories            =   "categories";                           // Kategorien
 const string tableCategoriesDescription =   "categories_description";               // Beschreibungen der Kategorien
 const string tableProductsToCategories  =   "products_to_categories";               // Verknüpfen der Artikel mit den Kategorien
@@ -155,6 +158,31 @@ Console.WriteLine("Teste Sage");
 if (!sageConfig.CheckLogin()) { Console.WriteLine("Fehler in der Konfiguration. Bitte überprüfen."); Console.ReadKey(); return; }
 Console.WriteLine("Logindaten geprüft.");
 
+// Shop auslesen
+Console.WriteLine("Lese Shop Daten ein...");
+// Artikel in Liste speichern
+string query = "SELECT * FROM " + tableProducts + ";";
+List<Product> shopProducts = ProductsReader(shopConfig, query);
+query = "SELECT * FROM " + tableProductsDescription + ";";
+shopProducts = ProductsReader(shopConfig, query, shopProducts);
+query = "SELECT * FROM " + tableProductsToCategories + ";";
+shopProducts = ProductsReader(shopConfig, query, shopProducts);
+
+// Kategorien in Liste speichern
+query = "SELECT * FROM " + tableCategories + ";";
+List<Categorie> shopCategories = CategoriesReader(shopConfig, query);
+query = "SELECT * FROM" + tableCategoriesDescription + ";";
+shopCategories = CategoriesReader(shopConfig, query, shopCategories);
+
+// Hersteller in Liste speichern
+query = "SELECT * FROM " + tableManufacturers + ";";
+List<Manufacturer> shopManufacturers = ManufacturerReader(shopConfig, query);
+query = "SELECT * FROM " + tableManufacturersInfo + ";";
+shopManufacturers = ManufacturerReader(shopConfig, query, shopManufacturers);
+
+// Bilder in Liste speichern
+query = "SELECT * FROM " + tableProductsImages + ";";
+List<Images> shopImages = ImagesReader(shopConfig, query);
 
 // Funktionen
 static bool CheckIfConfigExists()
@@ -341,4 +369,194 @@ static void CreateConfigFiles()
         sw.Write(content);
         sw.Close();
     }
+}
+
+static List<Product> ProductsReader(Config config, string query, [Optional] List<Product> tmp)
+{
+    List<Product> products = new();
+    if (tmp.Any())
+    {
+        products = tmp;
+    }
+    MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    MySqlCommand cmd = new(query, conn);
+    MySqlDataReader reader = cmd.ExecuteReader();
+    while (reader.Read())
+    {
+        // Hier sollte es products_description sein, falls keine falsche Tabelle übergeben wird ;) .
+        if (reader[1].GetType().Equals(typeof(Int32)) && reader[2].GetType().Equals(typeof(string)) && reader.FieldCount == 13){
+            if (!reader.IsDBNull(0))
+            {
+                // Wenn Artikel noch nicht exisitert wird übersprungen.
+                if(!products.Exists(x => x.Id == reader.GetInt32(0))){ continue; }
+                var index = products.FindIndex(x => x.Id == reader.GetInt32(0));
+                if (!reader.IsDBNull(2)) { products[index].Name = reader.GetString(2); }
+                if (!reader.IsDBNull(4)) { products[index].Description = reader.GetString(4); }
+                if (!reader.IsDBNull(5)) { products[index].ShortDiscription = reader.GetString(5); }
+            }
+        }
+        // Hier sollte es products sein, falls keine falsche Tabelle übergeben wird ;) .
+        if (reader[1].GetType().Equals(typeof(string)) && reader.FieldCount == 31)
+        {
+            if (!reader.IsDBNull(0))
+            {
+                // Wenn Artikel bereits vorhanden wird übersprungen, sonst wird ein neuer Artikel angelegt.
+                if (products.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+                // temporäre Variablen
+                string ean = "", model = "", image = "", manModel = "";
+                int quant = 0, sort = 0, status = 0, manId = 0;
+                decimal price = 0, weight = 0;
+                if (!reader.IsDBNull(1)) { ean = reader.GetString(1); }
+                if (!reader.IsDBNull(2)) { quant = reader.GetInt32(2); }
+                if (!reader.IsDBNull(4)) { model = reader.GetString(4); }
+                if (!reader.IsDBNull(10)) { sort = reader.GetInt32(10); }
+                if (!reader.IsDBNull(11)) { image = reader.GetString(11); }
+                if (!reader.IsDBNull(12)) { price = reader.GetDecimal(12); }
+                if (!reader.IsDBNull(17)) { weight = reader.GetDecimal(17); }
+                if (!reader.IsDBNull(18)) { status = reader.GetInt32(18); }
+                if (!reader.IsDBNull(22)) { manId = reader.GetInt32(22); }
+                if (!reader.IsDBNull(23)) { manModel = reader.GetString(23); }
+                products.Add(new Product()
+                {
+                    Id = reader.GetInt32(0),
+                    Ean = ean,
+                    Quantity = quant,
+                    Model = model,
+                    Sort = sort,
+                    ProductImage = image,
+                    Price = price,
+                    Weight = weight,
+                    Status = status,
+                    ManufacturerId = manId,
+                    ManufacturersModel = manModel
+                });
+            }
+        }
+        // Hier sollte es products_to_categories sein, falls keine falsche Tabelle übergeben wird ;) .
+        if (reader[1].GetType().Equals(typeof(Int32)) && reader.FieldCount == 2)
+        {
+            if (!reader.IsDBNull(0))
+            {
+                if (!products.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+                var index = products.FindIndex(x => x.Id == reader.GetInt32(0));
+                if (!reader.IsDBNull(1)) { products[index].CategoriesId = reader.GetInt32(1); }
+            }
+        }
+    }
+    reader.Close();
+    cmd.Dispose();
+    conn.Close();
+    return products;
+}
+
+static List<Categorie> CategoriesReader (Config config, string query, [Optional] List<Categorie> tmp)
+{
+    List<Categorie> cat = new();
+    if (tmp.Any()) { cat = tmp; }
+    MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    MySqlCommand cmd = new(query, conn);
+    MySqlDataReader reader = cmd.ExecuteReader();
+    while (reader.Read())
+    {
+        if (!reader.IsDBNull(0))
+        {
+            // Hier sind wir in categories_description
+            if (reader[1].GetType().Equals(typeof(Int32)) && reader.FieldCount == 8) 
+            {
+                if (!cat.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+                var index = cat.FindIndex(x => x.Id == reader.GetInt32(0));
+                if (!reader.IsDBNull(2)) { cat[index].Name = reader.GetString(2); }
+            }
+
+            // Hier sind wir in categories
+            if (reader[1].GetType().Equals(typeof(string)) && reader.FieldCount == 18) 
+            {
+                // Überspringen, wenn es die Categorie schon gibt
+                if (cat.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+                int parentid = 0, status = 0;
+                if (!reader.IsDBNull(2)) { parentid = reader.GetInt32(2); }
+                if (!reader.IsDBNull(3)) { status = reader.GetInt32(3); }
+                cat.Add(new Categorie()
+                {
+                    Id = reader.GetInt32(0),
+                    ParentId = parentid,
+                    Status = status
+                });
+            }
+        }
+    }
+    reader.Close();
+    cmd.Dispose();
+    conn.Close();
+    return cat;
+}
+
+static List<Manufacturer> ManufacturerReader (Config config, string query, [Optional] List<Manufacturer> tmp)
+{
+    List<Manufacturer> man = new();
+    if (tmp.Any()) { man = tmp; }
+    MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    MySqlCommand cmd = new(query, conn);
+    MySqlDataReader reader = cmd.ExecuteReader();
+    while (reader.Read())
+    {
+        if (!reader.IsDBNull(0))
+        {
+            // Hier Table manufacturers
+            if(reader[1].GetType().Equals(typeof(string)) && reader.FieldCount == 5) 
+            {
+                if (man.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+                string name = "";
+                if (!reader.IsDBNull(1)) { name = reader.GetString(1); }
+                man.Add(new Manufacturer()
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1)
+                });
+            }
+            // Hier Table manufacturers_info
+            if (reader[1].GetType().Equals(typeof(Int32)) && reader.FieldCount == 9) 
+            {
+                if(!man.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+                var index = man.FindIndex(x => x.Id == reader.GetInt32(0));
+                if (!reader.IsDBNull(2)) { man[index].Description = reader.GetString(2); }
+                if (!reader.IsDBNull(6)) { man[index].Url = reader.GetString(6); }
+            }
+        }
+    }
+    reader.Close();
+    cmd.Dispose();
+    conn.Close();
+    return man;
+}
+
+static List<Images> ImagesReader (Config config, string query)
+{
+    List<Images> images = new();
+    MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    MySqlCommand cmd = new(query, conn);
+    MySqlDataReader reader = cmd.ExecuteReader();
+    while (reader.Read())
+    {
+        if (!reader.IsDBNull(0))
+        {
+            if (images.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
+            int prodId = 0, num = 0;
+            string name = "";
+            if (!reader.IsDBNull(1)) { prodId = reader.GetInt32(1); }
+            if (!reader.IsDBNull(2)) { num = reader.GetInt32(2)}
+            if (!reader.IsDBNull(3)) { name = reader.GetString(3)}
+            images.Add(new Images()
+            {
+                Id = reader.GetInt32(0),
+                ProductsId = prodId,
+                ImageNumber = num,
+                Name = name
+            });
+        }
+    }
+    reader.Close();
+    cmd.Dispose();
+    conn.Close();
+    return images;
 }
