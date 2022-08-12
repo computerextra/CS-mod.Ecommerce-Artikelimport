@@ -1,17 +1,18 @@
 ﻿using FluentFTP;
 using System.Data.Odbc;
 using MySql.Data.MySqlClient;
+using System.Net;
 
 namespace CS_mod.Ecommerce_Artikelimport
 {
     public class Config
     {
-        public bool IsLieferant                 { get; set; }
-        public bool IsUsed                      { get; set; }
-        public bool HasFTP                      { get; set; }
-        public bool HasSQL                      { get; set; }
-        public bool HasMySQL                    { get; set; }
-        public bool IsOnlineshop                { get; set; }       // Sieht dumm aus, ist aber interessant, wenn es um die Logins geht, da der Onlineshop 2 Server und Logins hat...
+        public bool IsLieferant                 { get; set; } = false;
+        public bool IsUsed                      { get; set; } = false;
+        public bool HasFTP                      { get; set; } = false;
+        public bool HasSQL                      { get; set; } = false;
+        public bool HasMySQL                    { get; set; } = false;
+        public bool IsOnlineshop                { get; set; } = false;      // Sieht dumm aus, ist aber interessant, wenn es um die Logins geht, da der Onlineshop 2 Server und Logins hat...
 
         // Lieferanten Daten
         public bool Aufschlagsart               { get; set; }       // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
@@ -27,9 +28,9 @@ namespace CS_mod.Ecommerce_Artikelimport
         // FTP / My- / SQL Daten
         public string? Server                   { get; set; }
         public string? FtpServer                { get; set; }       // Nur im Fall vom Onlineshop
-        public string? User                     { get; set; }
+        public string? User { get; set; } = "";
         public string? FtpUser                  { get; set; }       // Nur im Fall vom Onlineshop
-        public string? Password                 { get; set; }
+        public string? Password                 { get; set; } = "";
         public string? FtpPassword              { get; set; }       // Nur im Fall vom Onlineshop
         public string? FtpRoot                  { get; set; }       // Nur im Fall vom Onlineshop
         public string? AdminFolder              { get; set; }       // Nur im Fall von Onlineshop
@@ -37,7 +38,7 @@ namespace CS_mod.Ecommerce_Artikelimport
         private string? OdbcConnectionString    { get; set; }       // Nur im Fall von SAGE
 
         // Download Links
-        public string? DownloadURL              { get; set; }       // Nur im Fall von Kosatec
+        public string? DownloadURL { get; set; } = "";      // Nur im Fall von Kosatec und API
 
         // Preise
         public string? PreisStandard            { get; set; }       // Option aus "netto" und "brutto"
@@ -86,7 +87,11 @@ namespace CS_mod.Ecommerce_Artikelimport
                         AdminFolder = split[1];
                         break;
                     case "DownloadURL":
-                        DownloadURL = split[1];
+                        if(split.Length > 2){
+                            DownloadURL = split[1]+":"+split[2];
+                        }else{
+                            DownloadURL = split[1];
+                        }
                         break;
                     case "ImportID":
                         ImportID = Convert.ToInt32(split[1]);
@@ -174,6 +179,49 @@ namespace CS_mod.Ecommerce_Artikelimport
             }
             catch (Exception) { return false; }
             return true;
+        }
+        public void CreateDownloadUrl()
+        {
+            DownloadURL = @"https://pricelist.api.de/pricelist/?cid=" + User + "&shop=API&action=FULL&map=sku;title;description;manufacturer;msku;itemGroup;availability;weight;ean;price;stock;externalStock;lwg1;lwg2;productCat;imageLinks;productUrl1;productUrl2;productUrl3;isEol";
+        }
+        public void DownloadCSV(string savePath, string serverPath = "")
+        {
+            if (!IsLieferant) { return; }
+            if (!IsUsed) { Console.WriteLine("Nicht genutzt, wird übersprungen."); return; }
+            if(HasFTP && serverPath == "") { Console.WriteLine("Keinen Serverpfad angegeben."); return; }
+            if (HasFTP && serverPath != "")
+            {
+                FtpClient client = new(Server, User, Password);
+                client.Connect();
+                if (client.FileExists(serverPath))
+                {
+                    client.DownloadFile(savePath, serverPath);
+                }
+                client.Disconnect();
+            }
+            // Hier ist dann der Downloadlink gefragt.
+            if (!HasFTP)
+            {
+                if(DownloadURL == "") { Console.WriteLine("DownloadUrl nicht gesetzt."); return; }
+#pragma warning disable SYSLIB0014 // Typ oder Element ist veraltet
+                using var client = new WebClient();
+                try 
+                {
+                    client.Credentials = new NetworkCredential(User, Password);
+#pragma warning disable CS8604 // Mögliches Nullverweisargument. Nicht möglich, da im If bereits gecatched.
+                    client.DownloadFile(DownloadURL, savePath);
+#pragma warning restore CS8604 // Mögliches Nullverweisargument.
+                }
+                catch (Exception)
+                {
+                    // Für Kosatec, weil der Download irgendwie beim ersten Mal nie klappt... beim zweiten mal aber ohne Probleme...
+                    client.Credentials = new NetworkCredential(User, Password);
+#pragma warning disable CS8604 // Mögliches Nullverweisargument. Nicht möglich, da im If bereits gecatched.
+                    client.DownloadFile(DownloadURL, savePath);
+#pragma warning restore CS8604 // Mögliches Nullverweisargument.
+                }
+#pragma warning restore SYSLIB0014 // Typ oder Element ist veraltet
+            }
         }
     }
 }

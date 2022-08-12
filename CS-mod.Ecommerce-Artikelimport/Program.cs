@@ -143,6 +143,7 @@ intosConfig.ReadConfig(configIntos);
 intosConfig.Server = @"ftp://ftp.intos.de";
 Console.WriteLine("Lese Api Konfiguration");
 apiConfig.ReadConfig(configApi);
+apiConfig.CreateDownloadUrl();
 Console.WriteLine("Lese Sage Konfiguration");
 sageConfig.ReadConfig(configSage);
 Console.WriteLine("Konfiguration eingelesen.");
@@ -171,7 +172,7 @@ shopProducts = ProductsReader(shopConfig, query, shopProducts);
 // Kategorien in Liste speichern
 query = "SELECT * FROM " + tableCategories + ";";
 List<Categorie> shopCategories = CategoriesReader(shopConfig, query);
-query = "SELECT * FROM" + tableCategoriesDescription + ";";
+query = "SELECT * FROM " + tableCategoriesDescription + ";";
 shopCategories = CategoriesReader(shopConfig, query, shopCategories);
 
 // Hersteller in Liste speichern
@@ -183,6 +184,27 @@ shopManufacturers = ManufacturerReader(shopConfig, query, shopManufacturers);
 // Bilder in Liste speichern
 query = "SELECT * FROM " + tableProductsImages + ";";
 List<Images> shopImages = ImagesReader(shopConfig, query);
+
+Console.WriteLine("Shop vollständig eingelesen.");
+
+// Download der CSV Dateien
+Console.WriteLine("Lade Preislisten.");
+if (!Directory.Exists(downloadFolder)) { Directory.CreateDirectory(downloadFolder); }
+// API Download
+Console.WriteLine("Lade API Liste");
+apiConfig.DownloadCSV(downloadFolder + "/" + apiFile);
+// Kosatec Download
+Console.WriteLine("Lade Kosatec Liste");
+kosatecConfig.DownloadCSV(downloadFolder + "/" + kosatecFile);
+// Intos Download
+Console.WriteLine("Lade Intos Liste");
+intosConfig.DownloadCSV(downloadFolder + "/" + intosFile);
+// Wortmann Download
+Console.WriteLine("Lade Wortmann Dateien.");
+wortmannConfig.DownloadCSV(downloadFolder + "/" + wortmannProdukte, "/Preisliste/productcatalog.csv");
+wortmannConfig.DownloadCSV(downloadFolder + "/" + wortmannContent, "/Preisliste/content.csv");
+if (!Directory.Exists(bilderFolder)) { Directory.CreateDirectory(bilderFolder); }
+wortmannConfig.DownloadCSV(bilderFolder + "/" + wortmannBilder, "/Produktbilder/productimages.zip");
 
 // Funktionen
 static bool CheckIfConfigExists()
@@ -374,17 +396,18 @@ static void CreateConfigFiles()
 static List<Product> ProductsReader(Config config, string query, [Optional] List<Product> tmp)
 {
     List<Product> products = new();
-    if (tmp.Any())
+    if (tmp != null)
     {
         products = tmp;
     }
     MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    conn.Open();
     MySqlCommand cmd = new(query, conn);
     MySqlDataReader reader = cmd.ExecuteReader();
     while (reader.Read())
     {
         // Hier sollte es products_description sein, falls keine falsche Tabelle übergeben wird ;) .
-        if (reader[1].GetType().Equals(typeof(Int32)) && reader[2].GetType().Equals(typeof(string)) && reader.FieldCount == 13){
+        if (reader.FieldCount == 13 && reader[1].GetType().Equals(typeof(Int32)) && reader[2].GetType().Equals(typeof(string))){
             if (!reader.IsDBNull(0))
             {
                 // Wenn Artikel noch nicht exisitert wird übersprungen.
@@ -396,7 +419,7 @@ static List<Product> ProductsReader(Config config, string query, [Optional] List
             }
         }
         // Hier sollte es products sein, falls keine falsche Tabelle übergeben wird ;) .
-        if (reader[1].GetType().Equals(typeof(string)) && reader.FieldCount == 31)
+        if (reader.FieldCount == 31 && reader[1].GetType().Equals(typeof(string)))
         {
             if (!reader.IsDBNull(0))
             {
@@ -433,7 +456,7 @@ static List<Product> ProductsReader(Config config, string query, [Optional] List
             }
         }
         // Hier sollte es products_to_categories sein, falls keine falsche Tabelle übergeben wird ;) .
-        if (reader[1].GetType().Equals(typeof(Int32)) && reader.FieldCount == 2)
+        if (reader.FieldCount == 2 && reader[1].GetType().Equals(typeof(Int32)))
         {
             if (!reader.IsDBNull(0))
             {
@@ -452,8 +475,9 @@ static List<Product> ProductsReader(Config config, string query, [Optional] List
 static List<Categorie> CategoriesReader (Config config, string query, [Optional] List<Categorie> tmp)
 {
     List<Categorie> cat = new();
-    if (tmp.Any()) { cat = tmp; }
+    if (tmp != null) { cat = tmp; }
     MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    conn.Open();
     MySqlCommand cmd = new(query, conn);
     MySqlDataReader reader = cmd.ExecuteReader();
     while (reader.Read())
@@ -461,7 +485,7 @@ static List<Categorie> CategoriesReader (Config config, string query, [Optional]
         if (!reader.IsDBNull(0))
         {
             // Hier sind wir in categories_description
-            if (reader[1].GetType().Equals(typeof(Int32)) && reader.FieldCount == 8) 
+            if (reader.FieldCount == 8 && reader[1].GetType().Equals(typeof(Int32))) 
             {
                 if (!cat.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
                 var index = cat.FindIndex(x => x.Id == reader.GetInt32(0));
@@ -469,7 +493,7 @@ static List<Categorie> CategoriesReader (Config config, string query, [Optional]
             }
 
             // Hier sind wir in categories
-            if (reader[1].GetType().Equals(typeof(string)) && reader.FieldCount == 18) 
+            if (reader.FieldCount == 18 && reader[1].GetType().Equals(typeof(string))) 
             {
                 // Überspringen, wenn es die Categorie schon gibt
                 if (cat.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
@@ -494,8 +518,9 @@ static List<Categorie> CategoriesReader (Config config, string query, [Optional]
 static List<Manufacturer> ManufacturerReader (Config config, string query, [Optional] List<Manufacturer> tmp)
 {
     List<Manufacturer> man = new();
-    if (tmp.Any()) { man = tmp; }
+    if (tmp != null) { man = tmp; }
     MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    conn.Open();
     MySqlCommand cmd = new(query, conn);
     MySqlDataReader reader = cmd.ExecuteReader();
     while (reader.Read())
@@ -503,7 +528,7 @@ static List<Manufacturer> ManufacturerReader (Config config, string query, [Opti
         if (!reader.IsDBNull(0))
         {
             // Hier Table manufacturers
-            if(reader[1].GetType().Equals(typeof(string)) && reader.FieldCount == 5) 
+            if(reader.FieldCount == 5 && reader[1].GetType().Equals(typeof(string))) 
             {
                 if (man.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
                 string name = "";
@@ -515,7 +540,7 @@ static List<Manufacturer> ManufacturerReader (Config config, string query, [Opti
                 });
             }
             // Hier Table manufacturers_info
-            if (reader[1].GetType().Equals(typeof(Int32)) && reader.FieldCount == 9) 
+            if (reader.FieldCount == 9 && reader[1].GetType().Equals(typeof(Int32))) 
             {
                 if(!man.Exists(x => x.Id == reader.GetInt32(0))) { continue; }
                 var index = man.FindIndex(x => x.Id == reader.GetInt32(0));
@@ -534,6 +559,7 @@ static List<Images> ImagesReader (Config config, string query)
 {
     List<Images> images = new();
     MySqlConnection conn = new("server=" + config.Server + ";user=" + config.User + ";password=" + config.Password + ";database=" + config.Database + ";");
+    conn.Open();
     MySqlCommand cmd = new(query, conn);
     MySqlDataReader reader = cmd.ExecuteReader();
     while (reader.Read())
@@ -544,8 +570,8 @@ static List<Images> ImagesReader (Config config, string query)
             int prodId = 0, num = 0;
             string name = "";
             if (!reader.IsDBNull(1)) { prodId = reader.GetInt32(1); }
-            if (!reader.IsDBNull(2)) { num = reader.GetInt32(2)}
-            if (!reader.IsDBNull(3)) { name = reader.GetString(3)}
+            if (!reader.IsDBNull(2)) { num = reader.GetInt32(2); }
+            if (!reader.IsDBNull(3)) { name = reader.GetString(3); }
             images.Add(new Images()
             {
                 Id = reader.GetInt32(0),
