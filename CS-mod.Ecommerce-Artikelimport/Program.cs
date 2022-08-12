@@ -1,7 +1,4 @@
-﻿using FluentFTP;
-using System.Data.Odbc;
-using MySql.Data.MySqlClient;
-using CS_mod.Ecommerce_Artikelimport;
+﻿using CS_mod.Ecommerce_Artikelimport;
 
 
 /*
