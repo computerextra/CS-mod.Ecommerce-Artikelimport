@@ -2,6 +2,10 @@
 using MySql.Data.MySqlClient;
 using System.Runtime.InteropServices;
 
+/*
+ * TODO!!!
+ * Preisberechnung muss überladen werden, da nicht immer nur 1 Kategorie da ist, die geprüft werden muss...
+ */
 
 /*
  * Doku für FluentFTP:  https://github.com/robinrodricks/FluentFTP/wiki/Quick-Start-Example
