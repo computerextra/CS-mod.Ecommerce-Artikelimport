@@ -687,7 +687,7 @@ List<Product> ReadApi(string filename, Config config)
        
         // Prüfe ob Kategorie exisitert, wenn nicht, direkt neu anlegen. Könnte ein wenig komisch werden...
         string kategorie = splitRow[12].Trim();
-        tmp.CategoriesId = OverloadedMethdos.GetCategoryId(kategorie, config, ref shopCategories, ref shopConfig);
+        tmp.CategoriesId = OverloadedMethdos.GetCategoryId(kategorie, config, ref shopCategories, shopConfig);
         Categorie categorie = shopCategories[shopCategories.FindIndex(x => x.Id == tmp.CategoriesId)];
 
         // Berechne Preis (geht nur bei API, alle anderen brauchen Array an Kategorien...)
