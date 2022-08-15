@@ -43,6 +43,7 @@ namespace CS_mod.Ecommerce_Artikelimport
         // Preise
         public string? PreisStandard            { get; set; }       // Option aus "netto" und "brutto"
         public int? Preisaufschlag              { get; set; }       // Aufschlag als Ganzzahl, wird entweder Prozentual oder als fester Wert genommen.
+        public int? MwSt                        { get; set; }       // Aktuelle MwSt aus Config,.
 
         // Anzahl der im Shop aktivierten Bilder pro Artikel
         public int? AnzahlBilder                { get; set; }

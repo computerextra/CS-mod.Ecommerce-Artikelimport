@@ -14,6 +14,7 @@
          * Index 0 => categories_id
          * Index 1 => language_id (1 = en / 2 = de )
          */
-        public string? Name { get; set; } // Index 2
+        public string Name { get; set; } = ""; // Index 2
+
     }
 }

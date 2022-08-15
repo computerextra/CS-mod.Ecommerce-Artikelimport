@@ -232,8 +232,10 @@ static void CreateConfigFiles()
                 "useWortmann:false\n" + 
                 "useIntos:false\n" + 
                 "useApi:false\n\n\n" + 
-                "# Warenwirtschaft ein/aus\n" + 
-                "useSage:false";
+                "# Warenwirtschaft ein/aus\n" +
+                "useSage:false\n\n" +
+                "#Aktuelle MwSt in %.\n" +
+                "MWST:\n";
     shop =      "# Shop Config Datei.\n" +
                 "# Konfiguration der Funktionen des Programms.\n\n\n" +
                 "# Datenbank einstellungen\n" +
