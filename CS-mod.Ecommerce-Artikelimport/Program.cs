@@ -188,7 +188,7 @@ List<Images> shopImages = ImagesReader(shopConfig, query);
 Console.WriteLine("Shop vollständig eingelesen.");
 
 // Prüfen ob Import IDs passen.
-CheckImportIds()
+CheckImportIds();
 
 // Download der CSV Dateien
 Console.WriteLine("Lade Preislisten.");
@@ -634,8 +634,6 @@ List<Product> ReadCsvFile(string filename, Config config, string name)
 List<Product> ReadApi(string filename, Config config)
 {
     List<Product> list = new();
-    string textTrenner = "\"";
-    string decimalTrenner = ".";
     string[] erlaubteHersteller = { "Ultron", "Ultron PCs", "Rasurbo", "Terratec", "Nanoxia", "Cooltek", "Thermalright", "Realpower" };
     foreach(string row in File.ReadAllLines(filename))
     {
@@ -678,49 +676,17 @@ List<Product> ReadApi(string filename, Config config)
         };
         // Status des Produktes setzen
         tmp.SetStatus();
-        // Prüfe ob Hersteller exisiter, wenn nicht wird er direkt neu angelegt.
+
+        // Prüfe ob Hersteller exisitert, wenn nicht wird er direkt neu angelegt.
         string hersteller = splitRow[3].Trim();
-        if (shopManufacturers.Contains(new Manufacturer { Name = hersteller }))
-        {
-            int index = shopManufacturers.FindIndex(x => x.Name == hersteller);
-            tmp.ManufacturerId = shopManufacturers[index].Id;
-        }
-        else
-        {
-            Manufacturer newManufacturer = new()
-            {
-                Name = hersteller
-            };
-            newManufacturer.GenerateNewManufacturer(shopConfig);
-            tmp.ManufacturerId = newManufacturer.Id;
-            shopManufacturers.Add(newManufacturer);
-        }
+        tmp.ManufacturerId = GetManufacturerId(tmp, hersteller);
+       
         // Prüfe ob Kategorie exisitert, wenn nicht, direkt neu anlegen. Könnte ein wenig komisch werden...
         string kategorie = splitRow[12].Trim();
-        Categorie categorie = new();
-        bool found;
-        if(shopCategories.Contains(new Categorie { Name = kategorie }))
-        {
-            int index = shopCategories.FindIndex(x => x.Name == kategorie);
-            if(shopCategories[index].ParentId == config.ImportID)
-            {
-                tmp.ManufacturerId = shopCategories[index].Id;
-                categorie = shopCategories[index];
-                found = true;
-            }
-            else
-                found = false;
-        } else { found = false; }
-        // Kategorie konnte nicht gefunden werden, wird neu angelegt!
-        if (!found)
-        {
-            Categorie newKat = new() { Name = kategorie, ParentId = config.ImportID };
-            newKat.GenerateNewCategorie(shopConfig);
-            shopCategories.Add(newKat);
-            categorie = newKat;
-            tmp.ManufacturerId = newKat.Id;
-        }
-        // Berechne Preis
+        tmp.CategoriesId = OverloadedMethdos.GetCategoryId(kategorie, config, ref shopCategories, ref shopConfig);
+        Categorie categorie = shopCategories[shopCategories.FindIndex(x => x.Id == tmp.CategoriesId)];
+
+        // Berechne Preis (geht nur bei API, alle anderen brauchen Array an Kategorien...)
         tmp.CalculatePrice(Convert.ToDecimal(splitRow[8]), config, categorie);
         /*
          * TODO!!!!
@@ -730,6 +696,25 @@ List<Product> ReadApi(string filename, Config config)
         list.Add(tmp);
     }
     return list;
+}
+
+int GetManufacturerId(Product product, string manufacturerName)
+{
+    if (shopManufacturers.Contains(new Manufacturer { Name = manufacturerName }))
+    {
+        int index = shopManufacturers.FindIndex(x => x.Name == manufacturerName);
+        return shopManufacturers[index].Id;
+    }
+    else
+    {
+        Manufacturer newManufacturer = new()
+        {
+            Name = manufacturerName
+        };
+        newManufacturer.GenerateNewManufacturer(shopConfig);
+        shopManufacturers.Add(newManufacturer);
+        return newManufacturer.Id;
+    }
 }
 
 void CheckImportIds()
