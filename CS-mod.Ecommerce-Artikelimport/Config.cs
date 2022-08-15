@@ -16,10 +16,11 @@ namespace CS_mod.Ecommerce_Artikelimport
 
         // Lieferanten Daten
         public bool Aufschlagsart               { get; set; }       // true = Prozentualer Aufschlag auf EK / false = Fester Wert in € als Aufschlag
-        public int? ImportID                    { get; set; }       // ID Der Kategorie in die Importiert werden soll
-        public string[]? IgnoredItems           { get; set; }       // Array aus Artikelnummern, die nicht importiert werden sollen.
+        public int ImportID                    { get; set; } = 0;       // ID Der Kategorie in die Importiert werden soll
+        public string[]? IgnoredItems           { get; set; }        // Array aus Artikelnummern, die nicht importiert werden sollen.
         public string[]? IgnoredCategories      { get; set; }       // Array aus Kategorie Namen, die nicht imortiert werden sollen.
         public string? Trennzeichen             { get; set; }       // CSV Trennzeichen!
+        public string Prefix                    { get; set; } = "";
 
         // Aufschläge für einzelne Kategorien. Aufbau: (Name der Kategorie, Wert, Art (0 = Aufschlag in € | 1 = Aufschlag in %))
         public List<string>? EigenerAufschlag { get; set; }         // Eigener Aufschlag für einzelne Kategorie als Liste. Aufbau: string,int,bool
@@ -88,11 +89,10 @@ namespace CS_mod.Ecommerce_Artikelimport
                         AdminFolder = split[1];
                         break;
                     case "DownloadURL":
-                        if(split.Length > 2){
+                        if(split.Length > 2)
                             DownloadURL = split[1]+":"+split[2];
-                        }else{
+                        else
                             DownloadURL = split[1];
-                        }
                         break;
                     case "ImportID":
                         ImportID = Convert.ToInt32(split[1]);
@@ -117,6 +117,12 @@ namespace CS_mod.Ecommerce_Artikelimport
                         break;
                     case "Trennzeichen":
                         Trennzeichen = split[1];
+                        break;
+                    case "Prefix":
+                        Prefix = split[1];
+                        break;
+                    case "MWST":
+                        MwSt = Convert.ToInt32(split[1]);
                         break;
                     default: continue;
                 }

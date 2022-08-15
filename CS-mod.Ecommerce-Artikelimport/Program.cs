@@ -187,6 +187,9 @@ List<Images> shopImages = ImagesReader(shopConfig, query);
 
 Console.WriteLine("Shop vollständig eingelesen.");
 
+// Prüfen ob Import IDs passen.
+CheckImportIds()
+
 // Download der CSV Dateien
 Console.WriteLine("Lade Preislisten.");
 if (!Directory.Exists(downloadFolder)) { Directory.CreateDirectory(downloadFolder); }
@@ -205,6 +208,13 @@ wortmannConfig.DownloadCSV(downloadFolder + "/" + wortmannProdukte, "/Preisliste
 wortmannConfig.DownloadCSV(downloadFolder + "/" + wortmannContent, "/Preisliste/content.csv");
 if (!Directory.Exists(bilderFolder)) { Directory.CreateDirectory(bilderFolder); }
 wortmannConfig.DownloadCSV(bilderFolder + "/" + wortmannBilder, "/Produktbilder/productimages.zip");
+Console.WriteLine("Alle Dateien runtergeladen.");
+
+// Dateien einlesen
+Console.WriteLine("Lese Artikellisten ein...");
+// API einlesen
+List<Product> apiProducts = ReadCsvFile(apiFile, apiConfig, "api");
+
 
 // Funktionen
 static bool CheckIfConfigExists()
@@ -267,6 +277,8 @@ static void CreateConfigFiles()
                 "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
+                "#Prefix für die Artikelnummer. Std leer.\n" +
+                "Prefix:\n" +
                 "# Einstellungen für Preisberechnung\n" +
                 "# netto oder brutto Preise als Standard im Shop\n" +
                 "Preis:netto\n\n" +
@@ -297,6 +309,8 @@ static void CreateConfigFiles()
                 "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
+                "#Prefix für die Artikelnummer. Std leer.\n" +
+                "Prefix:\n" +
                 "# Einstellungen für Preisberechnung\n" +
                 "# netto oder brutto Preise als Standard im Shop\n" +
                 "Preis:netto\n\n" +
@@ -327,6 +341,8 @@ static void CreateConfigFiles()
                 "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
+                "#Prefix für die Artikelnummer. Std leer.\n" +
+                "Prefix:\n" +
                 "# Einstellungen für Preisberechnung\n" +
                 "# netto oder brutto Preise als Standard im Shop\n" +
                 "Preis:netto\n\n" +
@@ -357,6 +373,8 @@ static void CreateConfigFiles()
                 "Trennzeichen:\"\n" +
                 "# Hier wird die ID für die Kategorie eingegeben, in welche die Artikel importiert werden sollen.\n" +
                 "ImportID:1\n\n" +
+                "#Prefix für die Artikelnummer. Std leer.\n" +
+                "Prefix:\n" +
                 "# Einstellungen für Preisberechnung\n" +
                 "# netto oder brutto Preise als Standard im Shop\n" +
                 "Preis:netto\n\n" +
@@ -587,4 +605,145 @@ static List<Images> ImagesReader (Config config, string query)
     cmd.Dispose();
     conn.Close();
     return images;
+}
+
+List<Product> ReadCsvFile(string filename, Config config, string name)
+{
+    List<Product> list = new();
+    if (!config.IsUsed) { Console.WriteLine("Laut Config ungenutzt, wird übersprungen."); return list; }
+    // Unterscheidungen der Listen:
+    switch (name)
+    {
+        case "":
+            Console.WriteLine("Kein Lieferant übertragen, breche ab!"); break;
+        case "api":
+            list = ReadApi(filename, config);
+            break;
+        case "kosatec":
+            break;
+        case "intos":
+            break;
+        case "wortmannProducts":
+            break;
+        case "wortmannContent":
+            break;
+    }
+
+    return list;
+}
+List<Product> ReadApi(string filename, Config config)
+{
+    List<Product> list = new();
+    string textTrenner = "\"";
+    string decimalTrenner = ".";
+    string[] erlaubteHersteller = { "Ultron", "Ultron PCs", "Rasurbo", "Terratec", "Nanoxia", "Cooltek", "Thermalright", "Realpower" };
+    foreach(string row in File.ReadAllLines(filename))
+    {
+        var splitRow = row.Split(config.Trennzeichen);
+        // Prüfen auf unerlaubte Hersteller oder durch config ignorierte Artikelnummern / Kategorien
+        if (!erlaubteHersteller.Contains(splitRow[3])) { continue; }
+        if(config.IgnoredCategories != null)
+        {
+            if (!config.IgnoredCategories.Contains(splitRow[12])) { continue; }
+            if (!config.IgnoredCategories.Contains(splitRow[13])) { continue; }
+        }
+        if (config.IgnoredItems != null)
+            if (!config.IgnoredItems.Contains(splitRow[0])) { continue; }
+        // Lese jede Zeile, die nicht abgebrochen wurde.
+        /*
+         * Benutzt werden folgende Indizies:
+         * 0 -> Artikelnummer -> drin
+         * 1 -> Titel -> drin
+         * 2 -> Beschreibung -> drin
+         * 3 -> Hersteller -> drin
+         * 4 -> Herstellernummer -> drin
+         * 7 -> Gewicht -> drin
+         * 8 -> Ean -> drin
+         * 9 -> EK netto  -> drin
+         * 10 + 11 -> Bestand (extern) -> drin
+         * 12 -> Kat -> drin
+         * 16 -> Bilder
+         */
+        int bestand = Convert.ToInt32(splitRow[10]) + Convert.ToInt32(splitRow[11]);
+        Product tmp = new()
+        {
+            Model = config.Prefix + splitRow[0],
+            Name = splitRow[1],
+            Description = splitRow[2],
+            ShortDiscription = splitRow[2],
+            ManufacturersModel = splitRow[4],
+            Weight = Convert.ToDecimal(splitRow[7]),
+            Ean = splitRow[8],
+            Quantity = bestand
+        };
+        // Status des Produktes setzen
+        tmp.SetStatus();
+        // Prüfe ob Hersteller exisiter, wenn nicht wird er direkt neu angelegt.
+        string hersteller = splitRow[3].Trim();
+        if (shopManufacturers.Contains(new Manufacturer { Name = hersteller }))
+        {
+            int index = shopManufacturers.FindIndex(x => x.Name == hersteller);
+            tmp.ManufacturerId = shopManufacturers[index].Id;
+        }
+        else
+        {
+            Manufacturer newManufacturer = new()
+            {
+                Name = hersteller
+            };
+            newManufacturer.GenerateNewManufacturer(shopConfig);
+            tmp.ManufacturerId = newManufacturer.Id;
+            shopManufacturers.Add(newManufacturer);
+        }
+        // Prüfe ob Kategorie exisitert, wenn nicht, direkt neu anlegen. Könnte ein wenig komisch werden...
+        string kategorie = splitRow[12].Trim();
+        Categorie categorie = new();
+        bool found;
+        if(shopCategories.Contains(new Categorie { Name = kategorie }))
+        {
+            int index = shopCategories.FindIndex(x => x.Name == kategorie);
+            if(shopCategories[index].ParentId == config.ImportID)
+            {
+                tmp.ManufacturerId = shopCategories[index].Id;
+                categorie = shopCategories[index];
+                found = true;
+            }
+            else
+                found = false;
+        } else { found = false; }
+        // Kategorie konnte nicht gefunden werden, wird neu angelegt!
+        if (!found)
+        {
+            Categorie newKat = new() { Name = kategorie, ParentId = config.ImportID };
+            newKat.GenerateNewCategorie(shopConfig);
+            shopCategories.Add(newKat);
+            categorie = newKat;
+            tmp.ManufacturerId = newKat.Id;
+        }
+        // Berechne Preis
+        tmp.CalculatePrice(Convert.ToDecimal(splitRow[8]), config, categorie);
+        /*
+         * TODO!!!!
+         * Bilder können noch nicht verarbeitet werden, da nicht klar ist, in welchem Format diese angeboten werden.. 
+         * API scheint es nicht wirklich auf die Kette zu bekommen das zu klären...
+         */
+        list.Add(tmp);
+    }
+    return list;
+}
+
+void CheckImportIds()
+{
+    // API
+    if (apiConfig.IsUsed && !shopCategories.Contains(new Categorie { Id = apiConfig.ImportID }))
+        Console.WriteLine("Fehler in der Api Konfiguration, ImportID exisitert nicht.");
+    // Kosatec 
+    if (kosatecConfig.IsUsed && !shopCategories.Contains(new Categorie { Id = kosatecConfig.ImportID}))
+        Console.WriteLine("Fehler in der Kosatec Konfiguration, ImportID exisitert nicht.");
+    // Intos 
+    if (intosConfig.IsUsed && !shopCategories.Contains(new Categorie { Id = intosConfig.ImportID}))
+        Console.WriteLine("Fehler in der Kosatec Konfiguration, ImportID exisitert nicht.");
+    // Wortmann 
+    if (wortmannConfig.IsUsed && !shopCategories.Contains(new Categorie { Id = wortmannConfig.ImportID}))
+        Console.WriteLine("Fehler in der Kosatec Konfiguration, ImportID exisitert nicht.");
 }
