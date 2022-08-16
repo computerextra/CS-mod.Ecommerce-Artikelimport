@@ -16,12 +16,20 @@
             shopCategories.Add(newKat);
             return newKat.Id;
         }
-        public static int GetCategoryId(string[] kategorie, Config config, List<Categorie> shopCategories, Config shopConfig, ref List<Categorie> productCategories)
+        public static int GetCategoryId(string[] kategorie, Config config, ref List<Categorie> shopCategories, Config shopConfig, ref List<Categorie> productCategories)
         {
-            // Nicht mehr Easy: Import Kat ist = kat[0].. Alles danach muss gecheckt werden.
+            // Prüfe auf leere Einträge im Array:
+            var tmp = kategorie.ToList();
+            for(int i = 0; i < kategorie.Length; i++)
+            {
+                if (kategorie[i] == "")
+                    tmp.RemoveAt(i);
+            }
+            kategorie = tmp.ToArray();
+            // Nicht mehr Easy:  Alles muss gecheckt werden.
             // Einfach mal die Schleife durchlaufen
             int lastId = config.ImportID;
-            for (int i = 1; i < kategorie.Length; i++)
+            for (int i = 0; i < kategorie.Length; i++)
             {
                 int index = shopCategories.FindIndex(x => x.Name == kategorie[i] && x.ParentId == lastId);
                
@@ -43,5 +51,6 @@
             // Alle Kategorien inkl. Parents angelegt. Jetzt geben wir die letzte gesetzte "lastId" zurück, da diese auf die letzte Kategorie im Array verweist.
             return lastId;
         }
+        
     }
 }

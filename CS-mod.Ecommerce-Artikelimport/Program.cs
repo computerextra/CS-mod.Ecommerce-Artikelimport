@@ -214,7 +214,8 @@ Console.WriteLine("Alle Dateien runtergeladen.");
 Console.WriteLine("Lese Artikellisten ein...");
 // API einlesen
 List<Product> apiProducts = ReadCsvFile(apiFile, apiConfig, "api");
-
+// Kosatec einlesen
+List<Product> kosatecProducts = ReadCsvFile(kosatecFile, kosatecConfig, "kosatec");
 
 // Funktionen
 static bool CheckIfConfigExists()
@@ -620,6 +621,7 @@ List<Product> ReadCsvFile(string filename, Config config, string name)
             list = ReadApi(filename, config);
             break;
         case "kosatec":
+            list = ReadKosatec(filename, config);
             break;
         case "intos":
             break;
@@ -639,14 +641,14 @@ List<Product> ReadApi(string filename, Config config)
     {
         var splitRow = row.Split(config.Trennzeichen);
         // Prüfen auf unerlaubte Hersteller oder durch config ignorierte Artikelnummern / Kategorien
-        if (!erlaubteHersteller.Contains(splitRow[3])) { continue; }
+        if (erlaubteHersteller.Contains(splitRow[3])) { continue; }
         if(config.IgnoredCategories != null)
         {
-            if (!config.IgnoredCategories.Contains(splitRow[12])) { continue; }
-            if (!config.IgnoredCategories.Contains(splitRow[13])) { continue; }
+            if (config.IgnoredCategories.Contains(splitRow[12])) { continue; }
+            if (config.IgnoredCategories.Contains(splitRow[13])) { continue; }
         }
         if (config.IgnoredItems != null)
-            if (!config.IgnoredItems.Contains(splitRow[0])) { continue; }
+            if (config.IgnoredItems.Contains(splitRow[0])) { continue; }
         // Lese jede Zeile, die nicht abgebrochen wurde.
         /*
          * Benutzt werden folgende Indizies:
@@ -676,7 +678,7 @@ List<Product> ReadApi(string filename, Config config)
         };
         // Status des Produktes setzen
         tmp.SetStatus();
-
+    
         // Prüfe ob Hersteller exisitert, wenn nicht wird er direkt neu angelegt.
         string hersteller = splitRow[3].Trim();
         tmp.ManufacturerId = GetManufacturerId(tmp, hersteller);
@@ -695,6 +697,100 @@ List<Product> ReadApi(string filename, Config config)
          */
         list.Add(tmp);
     }
+    return list;
+}
+
+List<Product> ReadKosatec(string filename, Config config)
+{
+    List<Product> list = new();
+    foreach(string row in File.ReadAllLines(filename))
+    {
+        var splitRow = row.Split(config.Trennzeichen);
+        // Prüfe auf Ignorierte Kategorien und Artikelnummern
+        if(config.IgnoredCategories != null)
+        {
+            if (splitRow[14] != "")
+                if (config.IgnoredCategories.Contains(splitRow[14]))
+                    continue;
+            if (splitRow[15] != "")
+                if (config.IgnoredCategories.Contains(splitRow[15])) 
+                    continue;
+            if (splitRow[16] != "")
+                if (config.IgnoredCategories.Contains(splitRow[16])) 
+                    continue;
+            if (splitRow[18] != "")
+                if (config.IgnoredCategories.Contains(splitRow[17])) 
+                    continue;
+            if (splitRow[19] != "")
+                if (config.IgnoredCategories.Contains(splitRow[18])) 
+                    continue;
+        }
+        if (config.IgnoredItems != null)
+            if (splitRow[0] != "")
+                if (config.IgnoredItems.Contains(splitRow[0]))
+                    continue;
+        // Benötigte Indizies:
+        /*
+         * 0 => Artikelnummer drin
+         * 1 => Herstellernummer drin
+         * 2 => Artikelname drin
+         * 3 => Hersteller
+         * 5 => EAN drin
+         * 6 => EK netto
+         * 9 => MEnge drin
+         * 12 => Gewicht drin
+         * 14 - 19 => Kategorien 1-6
+         * 21 => Short Desc drin
+         * 23 => Long Summary drin
+         * 24 => Marketing Text drin
+         * 25 => Specs drin
+         * 28 - 31 => Bilder (Semikolon getrennte Liste von Links) S/M/L/XL
+         */
+        Product product = new()
+        {
+            Model = config.Prefix + splitRow[0],
+            ManufacturersModel = splitRow[1],
+            Name = splitRow[2],
+            Ean = splitRow[5],
+            Quantity = Convert.ToInt32(splitRow[9]),
+            Weight = Convert.ToDecimal(splitRow[12]),
+            ShortDiscription = splitRow[21],
+            Description = splitRow[24] + "<br>" + splitRow[23] + "<br>" + splitRow[25],
+        };
+        product.SetStatus();
+        string hersteller = splitRow[3].Trim();
+        product.ManufacturerId = GetManufacturerId(product, hersteller);
+        string[] categories = { splitRow[14].Trim(), splitRow[15].Trim(), splitRow[16].Trim(), splitRow[17].Trim(), splitRow[18].Trim(), splitRow[19].Trim() };
+        List<Categorie> allCats = new();
+        product.CategoriesId = OverloadedMethdos.GetCategoryId(categories, config, ref shopCategories, shopConfig, ref allCats);
+        product.CalculatePrice(Convert.ToDecimal(splitRow[6]), config, allCats);
+
+        // Prüfe auf Existierende Bilder, XL bevorzugt.
+        if (splitRow[31] != "") // XL Bilder
+        {
+            var split = splitRow[31].Split(";");
+            product.ProductImage = Path.GetFileName(split[0]);
+
+        }else if (splitRow[30] != "") // L Bilder
+        {
+            var split = splitRow[30].Split(";");
+            product.ProductImage = Path.GetFileName(split[0]);
+        }
+        else if (splitRow[29] != "") // M Bilder
+        {
+            var split = splitRow[29].Split(";");
+            product.ProductImage = Path.GetFileName(split[0]);
+        }
+        else if (splitRow[28] != "") // S Bilder
+        {
+            var split = splitRow[28].Split(";");
+            product.ProductImage = Path.GetFileName(split[0]);
+        }
+
+        list.Add(product);
+        
+    }   
+
     return list;
 }
 
