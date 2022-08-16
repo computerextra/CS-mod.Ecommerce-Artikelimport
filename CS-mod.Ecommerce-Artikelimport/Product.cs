@@ -31,6 +31,9 @@
          */
         public int? CategoriesId { get; set; } // Index 1
 
+        // Für Bilder
+        public string? Images {get; set;} // String für Alle Bilder, die genutzt werden sollen. ; Separiert. (Bei Wortmann jedoch mit |)
+
         public void CalculatePrice( decimal ek, Config config, Categorie categorie )
         {
             decimal preis;
