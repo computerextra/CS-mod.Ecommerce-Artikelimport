@@ -201,6 +201,7 @@
                 List<Categorie> allKats = new();
                 tmp.CategoriesId = OverloadedMethdos.GetCategoryId(categories, config, ref shopCategories, shopConfig, ref allKats);
                 tmp.SetStatus();
+                tmp.ManufacturerId = GetManufacturerId(tmp, tmp.ManufacturersModel, ref shopManufacturer, ref shopConfig);
                 if(config.EigenerAufschlag == null) {
                     if(config.PreisStandard == "brutto")
                         tmp.Price = Convert.ToDecimal(rowSplit[9]);
