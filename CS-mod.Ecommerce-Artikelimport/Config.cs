@@ -36,7 +36,7 @@ namespace CS_mod.Ecommerce_Artikelimport
         public string? FtpRoot                  { get; set; }       // Nur im Fall vom Onlineshop
         public string? AdminFolder              { get; set; }       // Nur im Fall von Onlineshop
         public string? Database                 { get; set; }       // Nur im Fall von Onlineshop & SAGE
-        private string? OdbcConnectionString    { get; set; }       // Nur im Fall von SAGE
+        private string? OdbcConnectionString { get; set; } = "";       // Nur im Fall von SAGE
 
         // Download Links
         public string? DownloadURL { get; set; } = "";      // Nur im Fall von Kosatec und API
@@ -139,14 +139,20 @@ namespace CS_mod.Ecommerce_Artikelimport
             return passed;
         }
 
-        public void SetConnectionString()
+        private void SetConnectionString()
         {
             OdbcConnectionString = "Driver={ODBC Driver 17 for SQL Server}; Server=" + Server + ";UID=" + User + ";PWD=" + Password + ";DATABASE=" + Database;
         }
-
+        public string GetConnectionString()
+        {
+            SetConnectionString();
+            if(OdbcConnectionString != null)
+                return OdbcConnectionString;
+            return "";
+        }
         private bool SqlLogin()
         {
-            using OdbcConnection conn = new(OdbcConnectionString);
+            using OdbcConnection conn = new(GetConnectionString());
             try
             {
                 conn.Open();

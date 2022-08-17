@@ -52,7 +52,6 @@
             return lastId;
         }
 
-
         public static List<Product> ReadCsvFile(string filename, Config config, string name, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
         {
             List<Product> list = new();
@@ -72,6 +71,15 @@
                     list = ReadIntos(filename, config, ref shopConfig, ref shopManufacturer, ref shopCategories);
                     break;
             }
+            return list;
+        }
+        public static List<Product> ReadCsvFile(string file1, string file2, Config config, string name, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
+        {
+            List<Product> list = new();
+            if (!config.IsUsed) { Console.WriteLine("Laut Config ungenutzt, wird übersprungen."); return list; }
+            if (name == "wortmann")
+                list = ReadWortmann(file1, file2, config, ref shopConfig, ref shopManufacturer, ref shopCategories);
+
             return list;
         }
 
@@ -140,16 +148,6 @@
             return list;
 
         }
-
-        public static List<Product> ReadCsvFile(string file1, string file2, Config config, string name, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
-        {
-            List<Product> list = new();
-            if (name == "wortmann")
-                list = ReadWortmann(file1, file2, config, ref shopConfig, ref shopManufacturer, ref shopCategories);
-
-            return list;
-        }
-
         private static List<Product> ReadWortmann(string file1, string file2, Config config, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
         {
             List<Product> list = new();
@@ -234,7 +232,6 @@
             }
             return list;
         }
-
         private static List<Product> ReadApi(string filename, Config config, ref Config shopConfig, ref List<Manufacturer> shopManufacturers, ref List<Categorie> shopCategories)
         {
             List<Product> list = new();
@@ -301,7 +298,6 @@
             }
             return list;
         }
-
         private static List<Product> ReadKosatec(string filename, Config config, ref Config shopConfig, ref List<Manufacturer> shopManufacturers, ref List<Categorie> shopCategories)
         {
             List<Product> list = new();
@@ -397,7 +393,6 @@
             }
             return list;
         }
-
 
         private static int GetManufacturerId(Product product, string manufacturerName, ref List<Manufacturer> shopManufacturers, ref Config shopConfig)
         {

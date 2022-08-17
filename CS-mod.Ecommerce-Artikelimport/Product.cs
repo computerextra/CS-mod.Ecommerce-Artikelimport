@@ -1,4 +1,6 @@
-﻿namespace CS_mod.Ecommerce_Artikelimport
+﻿using System.Data.Odbc;
+
+namespace CS_mod.Ecommerce_Artikelimport
 {
     public class Product
     {
@@ -118,5 +120,54 @@
                 Status = 0;
         }
 
+        public static List<Product> ReadSage(Config config, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
+        {
+            List<Product> list = new();
+            // Connect 2 SAGE
+            string connectionString = config.GetConnectionString();
+            if(connectionString == ""){
+                Console.WriteLine("Fehler in der Config, bitte kontrollieren."); return list;
+            }
+            using OdbcConnection conn = new(connectionString);
+            try{
+                conn.Open();
+                string query = "SELECT * FROM sg_auf_artikel;";
+                OdbcCommand cmd = new(query, conn);
+                OdbcDataReader reader = cmd.ExecuteReader();
+                while(reader.Read()){
+                    // 1 => Artikelnummer
+                    // 2 => Name
+                    // 12 => Bestand
+                    // 58 => EAN
+                    Product tmp = new(){
+                        Id = reader.GetInt32(0),
+                        Model = reader.GetString(1),
+                        Name = reader.GetString(2),
+                        Quantity = Convert.ToInt32(reader.GetFloat(12)),
+                        Ean = reader.GetString(58)
+                    };
+                    list.Add(tmp);
+                }
+                reader.Close();
+                cmd.Dispose();
+            }catch(Exception ex){
+                Console.WriteLine(ex.Message);
+            }
+            list.ForEach(item => {
+                try{
+                    string query = "SELECT PR01 FROM sg_auf_vkpreis WHERE sg_auf_artikel_fk=" + item.Id;
+                    OdbcCommand cmd = new(query, conn);
+                    OdbcDataReader reader = cmd.ExecuteReader();
+                    while(reader.Read()){
+                        if(!DBNull.Value.Equals(reader[0]))
+                            item.Price = Convert.ToDecimal(reader.GetDouble(0));
+                    }
+                    reader.Close();
+                    cmd.Dispose();
+                }catch(Exception ex){Console.WriteLine(ex.Message);}
+            });
+            conn.Close();
+            return list;
+        }
     }
 }

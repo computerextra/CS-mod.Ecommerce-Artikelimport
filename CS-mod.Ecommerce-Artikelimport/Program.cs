@@ -220,6 +220,11 @@ List<Product> kosatecProducts = OverloadedMethdos.ReadCsvFile(kosatecFile, kosat
 List<Product> wortmannProducts = OverloadedMethdos.ReadCsvFile(wortmannProdukte, wortmannContent, wortmannConfig, "wortmann", ref shopConfig, ref shopManufacturers, ref shopCategories);
 // Intos einlesen
 List<Product> intosProducts = OverloadedMethdos.ReadCsvFile(intosFile, intosConfig, "intos", ref shopConfig, ref shopManufacturers, ref shopCategories);
+Console.WriteLine("Artikellisten eingelesen.");
+
+// SAGE einlesen
+Console.WriteLine("Lese Warenwirtschaft ein");
+List<Product> sageProducts = Product.ReadSage(sageConfig, ref shopConfig, ref shopManufacturers, ref shopCategories);
 
 // Funktionen
 static bool CheckIfConfigExists()
@@ -611,12 +616,6 @@ static List<Images> ImagesReader (Config config, string query)
     conn.Close();
     return images;
 }
-
-
-
-
-
-
 
 void CheckImportIds()
 {
