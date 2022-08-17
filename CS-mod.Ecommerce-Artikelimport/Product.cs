@@ -123,6 +123,7 @@ namespace CS_mod.Ecommerce_Artikelimport
         public static List<Product> ReadSage(Config config, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
         {
             List<Product> list = new();
+            if(!config.IsUsed){Console.WriteLine("Laut Config ungenutzt, wird übersprungen."); return list;}
             // Connect 2 SAGE
             string connectionString = config.GetConnectionString();
             if(connectionString == ""){
