@@ -69,9 +69,76 @@
                     list = ReadKosatec(filename, config, ref shopConfig, ref shopManufacturer, ref shopCategories);
                     break;
                 case "intos":
+                    list = ReadIntos(filename, config, ref shopConfig, ref shopManufacturer, ref shopCategories);
                     break;
             }
             return list;
+        }
+
+        private static List<Product> ReadIntos(string filename, Config config, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)
+        {
+            List<Product> list = new();
+            foreach (string row in File.ReadAllLines(filename))
+            {
+                var splitRow = row.Split(config.Trennzeichen);
+                // Prüfe auf Ignorierte Kategorien und Artikelnummern
+                if (config.IgnoredCategories != null)
+                {
+                    if (splitRow[20] != "")
+                        if (config.IgnoredCategories.Contains(splitRow[20]))
+                            continue;
+                    if (splitRow[21] != "")
+                        if (config.IgnoredCategories.Contains(splitRow[21]))
+                            continue;
+                    if (splitRow[22] != "")
+                        if (config.IgnoredCategories.Contains(splitRow[22]))
+                            continue;
+                }
+                if (config.IgnoredItems != null)
+                    if (splitRow[0] != "")
+                        if (config.IgnoredItems.Contains(splitRow[0]))
+                            continue;
+                // Benötigte Indizies:
+                /*
+                 * 0 => Artikelnummer 
+                 * 0 => Herstellernummer 
+                 * 1 => Artikelname 
+                 * 2 => Short Desc 
+                 * 2 => Long Summary 
+                 * 3 => EAN 
+                 * 5 => MEnge 
+                 * 6 => Gewicht 
+                 * 7 => UVP Brutto
+                 * 8 => Hersteller
+                 * 9 - 19 => Bilder
+                 * 20 - 22 => Kategorien 1-3
+                 */
+                Product product = new()
+                {
+                    Model = config.Prefix + splitRow[0],
+                    ManufacturersModel = splitRow[0],
+                    Name = splitRow[1],
+                    Ean = splitRow[3],
+                    Quantity = Convert.ToInt32(splitRow[5]),
+                    Weight = Convert.ToDecimal(splitRow[6]),
+                    ShortDiscription = splitRow[2],
+                    Description = splitRow[2],
+                };
+                product.SetStatus();
+                string hersteller = splitRow[8].Trim();
+                product.ManufacturerId = GetManufacturerId(product, hersteller, ref shopManufacturer, ref shopConfig);
+                string[] categories = { splitRow[20].Trim(), splitRow[21].Trim(), splitRow[22].Trim()};
+                List<Categorie> allCats = new();
+                product.CategoriesId = OverloadedMethdos.GetCategoryId(categories, config, ref shopCategories, shopConfig, ref allCats);
+                product.CalculatePrice(Convert.ToDecimal(splitRow[6]), config, allCats);
+                product.ProductImage = Path.GetFileName(splitRow[9]);
+                product.Images = splitRow[9] + ";" + splitRow[10] + ";" + splitRow[11] + ";" + splitRow[12] + ";" + splitRow[13] + ";" + 
+                    splitRow[14] + ";" + splitRow[15] + ";" + splitRow[16] + ";" + splitRow[17] + ";" + splitRow[18] + ";" + splitRow[19];
+                
+                list.Add(product);
+            }
+            return list;
+
         }
 
         public static List<Product> ReadCsvFile(string file1, string file2, Config config, string name, ref Config shopConfig, ref List<Manufacturer> shopManufacturer, ref List<Categorie> shopCategories)

@@ -218,6 +218,8 @@ List<Product> apiProducts = OverloadedMethdos.ReadCsvFile(apiFile, apiConfig, "a
 List<Product> kosatecProducts = OverloadedMethdos.ReadCsvFile(kosatecFile, kosatecConfig, "kosatec", ref shopConfig, ref shopManufacturers, ref shopCategories);
 // Wortmann einlesen
 List<Product> wortmannProducts = OverloadedMethdos.ReadCsvFile(wortmannProdukte, wortmannContent, wortmannConfig, "wortmann", ref shopConfig, ref shopManufacturers, ref shopCategories);
+// Intos einlesen
+List<Product> intosProducts = OverloadedMethdos.ReadCsvFile(intosFile, intosConfig, "intos", ref shopConfig, ref shopManufacturers, ref shopCategories);
 
 // Funktionen
 static bool CheckIfConfigExists()
