@@ -149,7 +149,21 @@
                 list.Add(tmp);
             }
             // Zweite CSV Datei.
-
+            foreach(string row in File.ReadAllLines(file2))
+            {
+                var splitRow = row.Split(config.Trennzeichen);
+                /*
+                 * 0 => Artikelnummer
+                 * 1 => PrintText
+                 * 5 => Beschreibung
+                 */
+                int index = list.FindIndex(x => x.Model == config.Prefix + splitRow[0]);
+                if(index > 0)
+                {
+                    list[index].ShortDiscription = splitRow[1];
+                    list[index].Description = splitRow[5];
+                }
+            }
             return list;
         }
 
